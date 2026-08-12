@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Политическая Партия | Официальный сайт</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- Навигация -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <div class="logo-placeholder" id="party-logo">
+        <span>ЛОГОТИП</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#hero">Главная</a>
+        <a href="#about">О нас</a>
+        <a href="#program">Программа</a>
+        <a href="#news">Новости</a>
+        <a href="#leadership">Руководство</a>
+      </nav>
+      <button class="btn btn-accent" id="openModalBtn">Вступить в партию</button>
+    </div>
+  </header>
+
+  <!-- Главный баннер -->
+  <section id="hero" class="hero">
+    <div class="container hero-content">
+      <h1>За будущее, порядок и развитие!</h1>
+      <p>Мы объединяем людей, готовых менять общество к лучшему. Присоединяйтесь к нашей команде уже сегодня.</p>
+      <div class="hero-actions">
+        <button class="btn btn-accent btn-large" onclick="openJoinModal()">Подать заявку</button>
+        <a href="#program" class="btn btn-outline btn-large">Наша программа</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- О партии / Статистика -->
+  <section id="about" class="section">
+    <div class="container">
+      <h2 class="section-title">О нашей партии</h2>
+      <div class="grid grid-3">
+        <div class="card stat-card">
+          <h3>100,000+</h3>
+          <p>Сторонников по всей стране</p>
+        </div>
+        <div class="card stat-card">
+          <h3>85</h3>
+          <p>Региональных отделений</p>
+        </div>
+        <div class="card stat-card">
+          <h3>500+</h3>
+          <p>Реализованных проектов</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Программа -->
+  <section id="program" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">Основные цели</h2>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card-icon">01</div>
+          <h3>Экономика и суверенитет</h3>
+          <p>Развитие отечественного производства, поддержка малого бизнеса и укрепление финансовой системы.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">02</div>
+          <h3>Социальная защита</h3>
+          <p>Гарантированная поддержка семей, доступное здравоохранение и качественное образование.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">03</div>
+          <h3>Правопорядок и закон</h3>
+          <p>Безопасность граждан, борьба с коррупцией и прозрачность работы государственных органов.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Новости -->
+  <section id="news" class="section">
+    <div class="container">
+      <h2 class="section-title">Последние новости</h2>
+      <div class="grid grid-3" id="news-grid">
+        <article class="card news-card">
+          <div class="news-date">12 Августа 2026</div>
+          <h3>Состоялся съезд партии в столице</h3>
+          <p>Обсудили ключевые направления работы на ближайший квартал и утвердили новые инициативы.</p>
+        </article>
+        <article class="card news-card">
+          <div class="news-date">10 Августа 2026</div>
+          <h3>Встреча с волонтерскими движениями</h3>
+          <p>Партия запустила масштабный проект поддержки местных социальных и эко-инициатив.</p>
+        </article>
+        <article class="card news-card">
+          <div class="news-date">05 Августа 2026</div>
+          <h3>Законопроект о поддержке молодежи</h3>
+          <p>Внесены новые предложения по льготной ипотеке и грантам для молодых специалистов.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Руководство -->
+  <section id="leadership" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">Руководство партии</h2>
+      <div class="grid grid-2">
+        <div class="card leader-card">
+          <div class="avatar-placeholder"></div>
+          <div>
+            <h3>Председатель партии</h3>
+            <p class="role">Руководитель фракции</p>
+            <p>Определяет стратегические направления развития и представляет партию на высшем уровне.</p>
+          </div>
+        </div>
+        <div class="card leader-card">
+          <div class="avatar-placeholder"></div>
+          <div>
+            <h3>Заместитель председателя</h3>
+            <p class="role">Координатор проектов</p>
+            <p>Отвечает за работу с региональными отделениями и взаимодействие с гражданами.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Футер -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <p>&copy; 2026 Политическая партия. Все права защищены.</p>
+      <div class="footer-links">
+        <a href="#">Конфиденциальность</a>
+        <a href="#">Контакты</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Модальное окно заявки -->
+  <div class="modal" id="joinModal">
+    <div class="modal-content">
+      <span class="close-btn" id="closeModalBtn">&times;</span>
+      <h2>Вступить в партию</h2>
+      <p>Заполните анкету, и наш представитель свяжется с вами.</p>
+      
+      <form id="partyForm">
+        <div class="form-group">
+          <label for="fullName">ФИО *</label>
+          <input type="text" id="fullName" required placeholder="Иванов Иван Иванович">
+        </div>
+        
+        <div class="form-group">
+          <label for="phone">Телефон *</label>
+          <input type="tel" id="phone" required placeholder="+7 (999) 000-00-00">
+        </div>
+        
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" required placeholder="example@mail.ru">
+        </div>
+
+        <div class="form-group">
+          <label for="region">Регион проживания *</label>
+          <input type="text" id="region" required placeholder="Москва / Свердловская обл.">
+        </div>
+
+        <button type="submit" class="btn btn-accent btn-full">Отправить заявку</button>
+      </form>
+      <div id="formStatus" class="form-status"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
