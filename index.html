@@ -236,22 +236,12 @@
                     </div>
 
                     <div>
-                        <div class="election-results">
-                            <h3>Итоги выборов</h3>
-                            <div class="result-item"><span class="party">ВЦПП «Новая Россия»</span><span class="percent">42%</span></div>
-                            <div class="result-item"><span class="party">Партия «Свободная Россия»</span><span class="percent">26%</span></div>
-                            <div class="result-item"><span class="party">Политическая партия «Деловая Россия»</span><span class="percent">13%</span></div>
-                            <div class="result-item"><span class="party">Демократическая политическая партия России</span><span class="percent">8%</span></div>
-                            <div class="result-item"><span class="party">Партия «Родина в будущем»</span><span class="percent">7%</span></div>
-                            <div class="result-item"><span class="party">Любимая партия свободной страны</span><span class="percent">4%</span></div>
-                            <div class="election-date">🗳️ Предстоящие выборы: 02.05.2026 &nbsp; 08:00 – 22:00</div>
+                        <!-- Блок "Итоги выборов" теперь динамический -->
+                        <div id="electionsBlock">
+                            <!-- Рендерится из Firebase -->
                         </div>
 
-                        <div style="background:var(--white); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow); margin-top:20px; border-left:4px solid var(--red);">
-                            <p style="font-weight:600; color:var(--dark-blue);">🇷🇺 Сила и гордость нашей страны!</p>
-                            <p style="font-size:14px; color:#3a4a5e; text-align:justify;">В преддверии Великого праздника, 9 Мая.</p>
-                            <p style="font-size:12px; color:var(--red); font-weight:600; margin-top:4px;">09.05.2026</p>
-                        </div>
+                        <!-- Блок "Сила и гордость нашей страны!" тоже динамический, но пока оставим как часть elections -->
                     </div>
                 </div>
             </section>
@@ -359,6 +349,7 @@
                 <button class="active" data-tab="news">Новости</button>
                 <button data-tab="applications">Заявки</button>
                 <button data-tab="members">Управление составом</button>
+                <button data-tab="elections">Выборы</button>
                 <button data-tab="settings">Настройки</button>
             </div>
 
@@ -420,6 +411,38 @@
                 <hr style="margin: 24px 0; border: 0; border-top: 2px solid var(--light-gray);" />
                 <h4 style="font-size:16px; font-weight:700; color:var(--dark-blue); margin-bottom:12px;">Текущий состав</h4>
                 <div id="adminMembersList"></div>
+            </div>
+
+            <!-- Вкладка: Выборы -->
+            <div class="admin-panel-section" id="adminTabElections">
+                <p style="margin-bottom:16px; color:#3a4a5e;">Редактирование данных о выборах.</p>
+                <form id="electionsForm">
+                    <div class="form-group">
+                        <label>Дата выборов</label>
+                        <input type="text" id="electionsDate" placeholder="02.05.2026" />
+                    </div>
+                    <div class="form-group">
+                        <label>Время голосования</label>
+                        <input type="text" id="electionsTime" placeholder="08:00 – 22:00" />
+                    </div>
+                    <div class="form-group">
+                        <label>Дополнительный текст (под датой)</label>
+                        <textarea id="electionsFooter" rows="3" placeholder="ru Сила и гордость нашей страны! В преддверии Великого праздника, 9 Мая."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Дата в футере</label>
+                        <input type="text" id="electionsFooterDate" placeholder="09.05.2026" />
+                    </div>
+
+                    <hr style="margin: 20px 0; border: 0; border-top: 2px solid var(--light-gray);" />
+                    <h4 style="font-size:16px; font-weight:700; color:var(--dark-blue); margin-bottom:12px;">Партии и проценты</h4>
+                    <div id="partiesContainer">
+                        <!-- Динамически добавляются поля -->
+                    </div>
+                    <button type="button" class="btn btn-success" id="addPartyBtn" style="margin-bottom:12px;">➕ Добавить партию</button>
+                    <br />
+                    <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить изменения</button>
+                </form>
             </div>
 
             <!-- Вкладка: Настройки -->
