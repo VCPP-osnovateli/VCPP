@@ -698,11 +698,11 @@ async function loadSymbolsAdmin() {
         const preview = document.getElementById(previewId);
         const fileName = document.getElementById(fileNameId);
         if (imageData && imageData.startsWith('data:image')) {
-            preview.innerHTML = `<img src="${imageData}" style="max-width:100px; max-height:100px; border-radius:8px; border:2px solid var(--red);" />`;
-            if (fileName) fileName.textContent = 'Изображение загружено';
+            preview.innerHTML = `<img src="${imageData}" style="max-width:120px; max-height:120px; border-radius:8px; border:2px solid var(--red);" />`;
+            if (fileName) fileName.textContent = '✅ Изображение загружено';
         } else {
-            preview.innerHTML = `<span style="color:#6a7a8e; font-size:13px;">Изображение не загружено</span>`;
-            if (fileName) fileName.textContent = 'Файл не выбран';
+            preview.innerHTML = `<span style="color:#6a7a8e; font-size:14px;">❌ Изображение не загружено</span>`;
+            if (fileName) fileName.textContent = '📂 Файл не выбран';
         }
     };
 
@@ -719,6 +719,7 @@ async function deleteSymbol(key) {
     alert(`✅ Изображение "${key}" удалено.`);
 }
 
+// Обработчики событий для символики
 document.addEventListener('click', function(e) {
     if (e.target && e.target.classList.contains('delete-symbol-btn')) {
         const key = e.target.getAttribute('data-key');
@@ -738,9 +739,9 @@ document.querySelectorAll('input[type="file"]').forEach(input => {
             const span = document.getElementById(spanId);
             if (span) {
                 if (this.files && this.files[0]) {
-                    span.textContent = this.files[0].name;
+                    span.textContent = `📎 ${this.files[0].name}`;
                 } else {
-                    span.textContent = 'Файл не выбран';
+                    span.textContent = '📂 Файл не выбран';
                 }
             }
         }
@@ -780,7 +781,7 @@ document.getElementById('symbolsAdminForm').addEventListener('submit', async fun
             const spanId = idMap[input.id];
             if (spanId) {
                 const span = document.getElementById(spanId);
-                if (span) span.textContent = 'Файл не выбран';
+                if (span) span.textContent = '📂 Файл не выбран';
             }
             hasChanges = true;
         }
