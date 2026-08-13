@@ -17,8 +17,8 @@
             <div class="header-top">
                 <div class="logo-block">
                     <div class="logo-text">
-                        <span class="party-name">ВЦПП <span class="accent">«Новая Россия»</span></span>
-                        <span class="slogan">Время строить Новую Россию!</span>
+                        <span class="party-name" id="headerPartyName">ВЦПП <span class="accent">«Новая Россия»</span></span>
+                        <span class="slogan" id="headerSlogan">Время строить Новую Россию!</span>
                     </div>
                 </div>
                 <div class="header-actions">
@@ -376,12 +376,9 @@
             <!-- Вкладка: Заявки -->
             <div class="admin-panel-section" id="adminTabApplications">
                 <p style="margin-bottom:16px; color:#3a4a5e;">Просмотр и обработка заявок на вступление.</p>
-                <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
-                    <button class="btn btn-danger" id="deleteApprovedBtn">🗑️ Удалить одобренные</button>
-                    <button class="btn btn-danger" id="deleteRejectedBtn">🗑️ Удалить отклонённые</button>
-                    <button class="btn btn-danger" id="deleteAllReviewedBtn">🗑️ Удалить все рассмотренные</button>
-                </div>
                 <div id="applicationsList"></div>
+                <!-- Кнопка удаления всех рассмотренных заявок -->
+                <button class="btn btn-danger" id="clearReviewedAppsBtn" style="margin-top:12px;">🗑️ Удалить все рассмотренные заявки</button>
             </div>
 
             <!-- Вкладка: Управление составом -->
@@ -445,43 +442,43 @@
                 </form>
             </div>
 
-            <!-- Вкладка: Настройки -->
+            <!-- Вкладка: Настройки (расширена) -->
             <div class="admin-panel-section" id="adminTabSettings">
-                <p style="margin-bottom:16px; color:#3a4a5e;">Настройка внешнего вида сайта.</p>
+                <p style="margin-bottom:16px; color:#3a4a5e;">Настройка внешнего вида и функционала сайта.</p>
                 <form id="settingsForm">
                     <div class="form-group">
-                        <label>Тема оформления</label>
-                        <select id="themeSelect">
-                            <option value="light">Светлая</option>
-                            <option value="dark">Тёмная</option>
-                            <option value="auto">Авто (по системе)</option>
-                        </select>
+                        <label>Название партии (в шапке)</label>
+                        <input type="text" id="settingsPartyName" placeholder="ВЦПП «Новая Россия»" />
                     </div>
                     <div class="form-group">
-                        <label>Размер шрифта</label>
-                        <select id="fontSizeSelect">
-                            <option value="small">Маленький</option>
-                            <option value="medium" selected>Средний</option>
-                            <option value="large">Большой</option>
-                            <option value="xlarge">Очень большой</option>
-                        </select>
+                        <label>Слоган (в шапке)</label>
+                        <input type="text" id="settingsSlogan" placeholder="Время строить Новую Россию!" />
+                    </div>
+                    <hr style="margin: 16px 0; border: 0; border-top: 2px solid var(--light-gray);" />
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="settingsShowElections" /> Показывать блок «Итоги выборов» на странице «Пресс-служба»
+                        </label>
                     </div>
                     <div class="form-group">
-                        <div class="form-check" style="justify-content:flex-start; gap:12px;">
-                            <input type="checkbox" id="showNewsPreview" checked />
-                            <label for="showNewsPreview">Показывать превью новостей на главной</label>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="form-check" style="justify-content:flex-start; gap:12px;">
-                            <input type="checkbox" id="enableAnimations" checked />
-                            <label for="enableAnimations">Включить анимации переходов</label>
-                        </div>
+                        <label>
+                            <input type="checkbox" id="settingsShowFooterBlock" /> Показывать дополнительный блок под выборами
+                        </label>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить настройки</button>
                 </form>
+
                 <hr style="margin: 24px 0; border: 0; border-top: 2px solid var(--light-gray);" />
-                <p><small>Настройки сохраняются в localStorage и действуют только на вашем устройстве.</small></p>
+
+                <p style="margin-bottom:16px; color:#3a4a5e;">Фоновое изображение:</p>
+                <form id="backgroundForm">
+                    <div class="form-group">
+                        <label>Фоновое изображение (загрузить с ПК)</label>
+                        <input type="file" id="bgImage" accept="image/*" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">📷 Применить фон</button>
+                    <button type="button" class="btn btn-danger" id="resetBgBtn" style="margin-top:8px;">🗑️ Сбросить фон</button>
+                </form>
             </div>
 
             <div style="margin-top:20px; text-align:right;">
@@ -597,8 +594,8 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <div class="party-name">ВЦПП <span class="red">«Новая Россия»</span></div>
-                    <div class="slogan">Время строить Новую Россию!</div>
+                    <div class="party-name" id="footerPartyName">ВЦПП <span class="red">«Новая Россия»</span></div>
+                    <div class="slogan" id="footerSlogan">Время строить Новую Россию!</div>
                     <p>Всероссийская центристская политическая партия «Новая Россия». Мы работаем для людей и ради будущего нашей великой родины.</p>
                 </div>
                 <div class="footer-col">
