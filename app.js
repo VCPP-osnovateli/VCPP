@@ -453,6 +453,49 @@ async function applyBackground() {
 }
 
 // ============================================================
+// SAVE / RESTORE STATE
+// ============================================================
+function saveAdminState(loggedIn) {
+    if (loggedIn) {
+        localStorage.setItem('admin_logged_in', 'true');
+    } else {
+        localStorage.removeItem('admin_logged_in');
+    }
+}
+
+function saveUserState(userId) {
+    if (userId) {
+        localStorage.setItem('user_id', userId);
+    } else {
+        localStorage.removeItem('user_id');
+    }
+}
+
+async function restoreState() {
+    // Админ
+    const adminLogged = localStorage.getItem('admin_logged_in') === 'true';
+    if (adminLogged) {
+        isAdminLoggedIn = true;
+        const loginBtn = document.getElementById('loginBtn');
+        loginBtn.textContent = 'Админ-панель';
+        loginBtn.classList.add('logged-in');
+    }
+
+    // Пользователь
+    const userId = localStorage.getItem('user_id');
+    if (userId) {
+        const users = await dbFirebase.getUsers();
+        const user = users.find(u => u.id === userId);
+        if (user) {
+            currentUser = user;
+        } else {
+            // если пользователь не найден, очищаем localStorage
+            localStorage.removeItem('user_id');
+        }
+    }
+}
+
+// ============================================================
 // EVENT LISTENERS
 // ============================================================
 function setupEventListeners() {
@@ -513,6 +556,7 @@ function setupEventListeners() {
         const password = document.getElementById('loginPassword').value;
         if (username === 'admin' && password === 'admin') {
             isAdminLoggedIn = true;
+            saveAdminState(true);
             loginBtn.textContent = 'Админ-панель';
             loginBtn.classList.add('logged-in');
             closeLoginModal();
@@ -526,6 +570,7 @@ function setupEventListeners() {
 
     adminLogoutBtn.addEventListener('click', function() {
         isAdminLoggedIn = false;
+        saveAdminState(false);
         loginBtn.textContent = 'Вход';
         loginBtn.classList.remove('logged-in');
         closeAdminModal();
@@ -539,6 +584,7 @@ function setupEventListeners() {
         const user = users.find(u => u.fullName === fullName && u.passport === passport);
         if (user) {
             currentUser = user;
+            saveUserState(user.id);
             showProfileContent(user);
         } else {
             alert('Пользователь с таким ФИО и паспортом не найден.');
@@ -564,6 +610,7 @@ function setupEventListeners() {
 
     profileLogoutBtn.addEventListener('click', function() {
         currentUser = null;
+        saveUserState(null);
         profileLoginForm.style.display = 'block';
         profileContent.style.display = 'none';
         document.getElementById('profileLoginName').value = '';
@@ -768,6 +815,7 @@ document.addEventListener('DOMContentLoaded', function() {
     (async function() {
         try {
             await dbFirebase.seed();
+            await restoreState();
             await renderNews();
             await renderComposition();
             await renderApplications();
