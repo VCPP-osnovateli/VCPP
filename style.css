@@ -907,45 +907,6 @@ ul { list-style: none; }
 }
 .symbol-card p { font-size: 14px; color: #3a4a5e; }
 
-/* ===== CUSTOM FILE UPLOAD ===== */
-.custom-file-upload {
-    display: inline-block;
-    padding: 10px 20px;
-    background: var(--red);
-    color: var(--white);
-    border-radius: 30px;
-    cursor: pointer;
-    font-size: 15px;
-    font-weight: 600;
-    transition: background 0.3s, transform 0.2s;
-    border: none;
-    user-select: none;
-}
-.custom-file-upload:hover {
-    background: #b81e2e;
-    transform: scale(1.02);
-}
-.custom-file-upload:active {
-    transform: scale(0.98);
-}
-.custom-file-upload input[type="file"] {
-    display: none;
-}
-
-.delete-symbol-btn {
-    padding: 6px 16px;
-    font-size: 13px;
-    border-radius: 30px;
-    background: var(--red);
-    color: var(--white);
-    border: none;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-.delete-symbol-btn:hover {
-    background: #b81e2e;
-}
-
 /* ===== PROFILE EDIT FORM ===== */
 #profileEditForm {
     background: var(--light-gray);
