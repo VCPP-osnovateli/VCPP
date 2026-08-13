@@ -1184,6 +1184,34 @@ ul {
     margin-bottom: 16px;
 }
 
+.symbol-card .symbol-image .text-logo {
+    background: var(--dark-blue);
+    color: var(--white);
+    padding: 8px 6px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 1.3;
+    text-align: center;
+    width: 200px;
+    border: 2px solid var(--red);
+}
+
+.symbol-card .symbol-image .text-logo .line {
+    display: block;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.symbol-card .symbol-image .text-logo .line1 { font-size: 13px; }
+.symbol-card .symbol-image .text-logo .line2 { font-size: 15px; font-weight: 800; color: #FFD700; }
+.symbol-card .symbol-image .text-logo .line3 { font-size: 12px; }
+.symbol-card .symbol-image .text-logo .line4 { font-size: 13px; font-weight: 700; }
+.symbol-card .symbol-image .text-logo .line5 { font-size: 12px; }
+.symbol-card .symbol-image .text-logo .line6 { font-size: 13px; font-weight: 700; }
+.symbol-card .symbol-image .text-logo .line7 { font-size: 14px; font-weight: 800; color: #FFD700; }
+.symbol-card .symbol-image .text-logo .line8 { font-size: 16px; font-weight: 800; color: #FFD700; }
+
 .symbol-card h3 {
     font-size: 20px;
     font-weight: 700;
@@ -1216,49 +1244,6 @@ ul {
 #profileEditForm .form-group textarea {
     font-size: 13px;
     padding: 6px 12px;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 992px) {
-    .mission-block { grid-template-columns: 1fr; }
-    .press-grid { grid-template-columns: 1fr; }
-    .footer-grid { grid-template-columns: 1fr 1fr; }
-    .modal-box { max-width: 95%; }
-    .symbols-grid { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 768px) {
-    .header-top { flex-direction: column; align-items: stretch; gap: 8px; }
-    .logo-block { align-items: center; }
-    .logo-text .party-name { font-size: 18px; }
-    .header-actions { justify-content: center; }
-    .nav { flex-direction: column; align-items: stretch; gap: 8px; }
-    .nav-links { justify-content: center; }
-    .nav-search { justify-content: center; }
-    .nav-search input { width: 100%; max-width: 260px; }
-    .hero-content h1 { font-size: 28px; }
-    .hero { padding: 36px 0 30px; }
-    .stats-grid { grid-template-columns: 1fr 1fr; }
-    .footer-grid { grid-template-columns: 1fr; gap: 24px; }
-    .footer-bottom { flex-direction: column; text-align: center; }
-    .section-title { font-size: 26px; }
-    .form-wrapper { padding: 24px 18px; }
-    .comp-grid { grid-template-columns: 1fr 1fr; }
-    .news-grid { grid-template-columns: 1fr; }
-    .modal-box { padding: 24px 18px; }
-    .admin-tabs { justify-content: center; }
-    .symbols-grid { grid-template-columns: 1fr; }
-    .admin-news-item { flex-direction: column; align-items: stretch; }
-    .admin-news-item .btn-group { justify-content: flex-end; }
-}
-
-@media (max-width: 480px) {
-    .stats-grid { grid-template-columns: 1fr; }
-    .comp-grid { grid-template-columns: 1fr; }
-    .hero-buttons { flex-direction: column; }
-    .hero-buttons .btn { width: 100%; text-align: center; }
-    .nav-links a { font-size: 13px; padding: 4px 12px; }
-    .application-item .app-header { flex-direction: column; align-items: flex-start; }
 }
 
 /* ===== UTILITY ===== */
