@@ -25,6 +25,7 @@ const dbFirebase = {
         return Object.keys(data).map(key => ({ id: key, ...data[key] }));
     },
 
+    // --- News ---
     async getNews() {
         const snapshot = await database.ref('news').once('value');
         return this._toArray(snapshot);
@@ -41,6 +42,7 @@ const dbFirebase = {
         await database.ref(`news/${id}`).update(newData);
     },
 
+    // --- Users ---
     async getUsers() {
         const snapshot = await database.ref('users').once('value');
         return this._toArray(snapshot);
@@ -61,6 +63,7 @@ const dbFirebase = {
         await database.ref(`users/${id}`).update(newData);
     },
 
+    // --- Members ---
     async getMembers() {
         const snapshot = await database.ref('members').once('value');
         return this._toArray(snapshot);
@@ -79,6 +82,7 @@ const dbFirebase = {
         await database.ref(`members/${id}`).update(newData);
     },
 
+    // --- Settings ---
     async getSetting(key) {
         const snapshot = await database.ref(`settings/${key}`).once('value');
         return snapshot.val();
@@ -90,7 +94,25 @@ const dbFirebase = {
         await database.ref(`settings/${key}`).remove();
     },
 
+    // --- Elections ---
+    async getElections() {
+        const snapshot = await database.ref('elections').once('value');
+        const data = snapshot.val();
+        if (!data) return null;
+        // Если есть parties, но это объект, преобразуем в массив
+        if (data.parties && typeof data.parties === 'object' && !Array.isArray(data.parties)) {
+            data.parties = Object.values(data.parties);
+        }
+        return data;
+    },
+    async setElections(data) {
+        // Сохраняем parties как массив (Firebase сохранит как объект с индексами)
+        await database.ref('elections').set(data);
+    },
+
+    // --- Seed ---
     async seed() {
+        // Новости
         const news = await this.getNews();
         if (news.length === 0) {
             const defaultNews = [
@@ -103,6 +125,7 @@ const dbFirebase = {
             }
         }
 
+        // Члены партии
         const members = await this.getMembers();
         if (members.length === 0) {
             const defaultMembers = [
@@ -118,9 +141,30 @@ const dbFirebase = {
             }
         }
 
+        // Настройки фона
         const bg = await this.getSetting('background');
         if (bg === null) {
             await this.setSetting('background', '');
+        }
+
+        // Данные выборов (если нет — создаём с дефолтными)
+        const elections = await this.getElections();
+        if (!elections) {
+            const defaultElections = {
+                parties: [
+                    { name: 'ВЦПП «Новая Россия»', percent: 42 },
+                    { name: 'Партия «Свободная Россия»', percent: 26 },
+                    { name: 'Политическая партия «Деловая Россия»', percent: 13 },
+                    { name: 'Демократическая политическая партия России', percent: 8 },
+                    { name: 'Партия «Родина в будущем»', percent: 7 },
+                    { name: 'Любимая партия свободной страны', percent: 4 }
+                ],
+                date: '02.05.2026',
+                time: '08:00 – 22:00',
+                footer: 'ru Сила и гордость нашей страны! В преддверии Великого праздника, 9 Мая.',
+                footerDate: '09.05.2026'
+            };
+            await this.setElections(defaultElections);
         }
     }
 };
@@ -441,6 +485,134 @@ editMemberForm.addEventListener('submit', async function(e) {
 });
 
 // ============================================================
+// ELECTIONS RENDER & FORM
+// ============================================================
+async function renderElections() {
+    const elections = await dbFirebase.getElections();
+    const container = document.getElementById('electionsBlock');
+    if (!container) return;
+
+    if (!elections || !elections.parties || elections.parties.length === 0) {
+        container.innerHTML = '<p>Данные о выборах временно отсутствуют.</p>';
+        return;
+    }
+
+    let html = `
+        <div class="election-results">
+            <h3>Итоги выборов</h3>
+    `;
+    elections.parties.forEach(p => {
+        html += `
+            <div class="result-item">
+                <span class="party">${p.name}</span>
+                <span class="percent">${p.percent}%</span>
+            </div>
+        `;
+    });
+    html += `
+            <div class="election-date">
+                🗳️ Предстоящие выборы: ${elections.date || 'Не указана'} &nbsp; ${elections.time || ''}
+            </div>
+        </div>
+    `;
+
+    // Дополнительный блок с футером
+    if (elections.footer || elections.footerDate) {
+        html += `
+            <div style="background:var(--white); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow); margin-top:20px; border-left:4px solid var(--red);">
+                <p style="font-weight:600; color:var(--dark-blue);">🇷🇺 ${elections.footer || ''}</p>
+                ${elections.footerDate ? `<p style="font-size:12px; color:var(--red); font-weight:600; margin-top:4px;">${elections.footerDate}</p>` : ''}
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+// Заполнение формы выборов в админке
+async function populateElectionsForm() {
+    const elections = await dbFirebase.getElections();
+    if (!elections) return;
+
+    document.getElementById('electionsDate').value = elections.date || '';
+    document.getElementById('electionsTime').value = elections.time || '';
+    document.getElementById('electionsFooter').value = elections.footer || '';
+    document.getElementById('electionsFooterDate').value = elections.footerDate || '';
+
+    const partiesContainer = document.getElementById('partiesContainer');
+    partiesContainer.innerHTML = '';
+    if (elections.parties && elections.parties.length) {
+        elections.parties.forEach((p, index) => {
+            addPartyField(index, p.name, p.percent);
+        });
+    } else {
+        addPartyField(0, '', '');
+    }
+}
+
+function addPartyField(index, name = '', percent = '') {
+    const container = document.getElementById('partiesContainer');
+    const div = document.createElement('div');
+    div.className = 'party-field';
+    div.style.display = 'flex';
+    div.style.gap = '10px';
+    div.style.marginBottom = '10px';
+    div.style.alignItems = 'center';
+    div.innerHTML = `
+        <input type="text" class="party-name" placeholder="Название партии" value="${name}" style="flex:2; padding: 8px 12px; border: 2px solid var(--light-gray); border-radius: var(--radius); font-family: inherit; font-size: 14px;" />
+        <input type="number" class="party-percent" placeholder="%" value="${percent}" style="flex:0.5; padding: 8px 12px; border: 2px solid var(--light-gray); border-radius: var(--radius); font-family: inherit; font-size: 14px; width: 80px;" />
+        <button type="button" class="btn btn-danger remove-party-btn" style="padding: 4px 12px; font-size: 14px;">✕</button>
+    `;
+    container.appendChild(div);
+
+    // Обработчик удаления
+    div.querySelector('.remove-party-btn').addEventListener('click', function() {
+        if (container.children.length > 1) {
+            container.removeChild(div);
+        } else {
+            alert('Должна быть хотя бы одна партия.');
+        }
+    });
+}
+
+// Обработчик добавления партии
+document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'addPartyBtn') {
+        addPartyField(document.querySelectorAll('.party-field').length);
+    }
+});
+
+// Сохранение выборов
+document.getElementById('electionsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const date = document.getElementById('electionsDate').value.trim();
+    const time = document.getElementById('electionsTime').value.trim();
+    const footer = document.getElementById('electionsFooter').value.trim();
+    const footerDate = document.getElementById('electionsFooterDate').value.trim();
+
+    const partyFields = document.querySelectorAll('.party-field');
+    const parties = [];
+    partyFields.forEach(field => {
+        const name = field.querySelector('.party-name').value.trim();
+        const percent = parseFloat(field.querySelector('.party-percent').value);
+        if (name && !isNaN(percent)) {
+            parties.push({ name, percent });
+        }
+    });
+
+    if (parties.length === 0) {
+        alert('Добавьте хотя бы одну партию с корректными данными.');
+        return;
+    }
+
+    const electionsData = { parties, date, time, footer, footerDate };
+    await dbFirebase.setElections(electionsData);
+    await renderElections();
+    alert('✅ Данные о выборах обновлены!');
+});
+
+// ============================================================
 // BACKGROUND
 // ============================================================
 async function applyBackground() {
@@ -472,7 +644,6 @@ function saveUserState(userId) {
 }
 
 async function restoreState() {
-    // Админ
     const adminLogged = localStorage.getItem('admin_logged_in') === 'true';
     if (adminLogged) {
         isAdminLoggedIn = true;
@@ -481,7 +652,6 @@ async function restoreState() {
         loginBtn.classList.add('logged-in');
     }
 
-    // Пользователь
     const userId = localStorage.getItem('user_id');
     if (userId) {
         const users = await dbFirebase.getUsers();
@@ -489,7 +659,6 @@ async function restoreState() {
         if (user) {
             currentUser = user;
         } else {
-            // если пользователь не найден, очищаем localStorage
             localStorage.removeItem('user_id');
         }
     }
@@ -528,6 +697,7 @@ function setupEventListeners() {
             openAdminModal();
             renderApplications();
             renderAdminMembers();
+            populateElectionsForm();
         } else {
             openLoginModal();
         }
@@ -563,6 +733,7 @@ function setupEventListeners() {
             openAdminModal();
             renderApplications();
             renderAdminMembers();
+            populateElectionsForm();
         } else {
             alert('Неверный логин или пароль!');
         }
@@ -796,6 +967,7 @@ function setupEventListeners() {
             document.getElementById('adminTab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
             if (tabName === 'applications') renderApplications();
             if (tabName === 'members') renderAdminMembers();
+            if (tabName === 'elections') populateElectionsForm();
         });
     });
 
@@ -820,9 +992,11 @@ document.addEventListener('DOMContentLoaded', function() {
             await renderComposition();
             await renderApplications();
             await renderAdminMembers();
+            await renderElections();
             const members = await dbFirebase.getMembers();
             document.getElementById('totalMembers').textContent = members.length;
             await applyBackground();
+            // Если админ залогинен, подгружаем форму выборов при открытии админки
         } catch (e) {
             console.error('Ошибка инициализации:', e);
         }
