@@ -1,76 +1,710 @@
-// Конфигурация Firebase (замени своими ключами из Firebase Console)
+// ============================================================
+// FIREBASE CONFIGURATION
+// ============================================================
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyA9xIIgwbaZ5NKRgGHDGz7lju6q2saTzAc",
+    authDomain: "partia-cd6f6.firebaseapp.com",
+    databaseURL: "https://partia-cd6f6-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "partia-cd6f6",
+    storageBucket: "partia-cd6f6.firebasestorage.app",
+    messagingSenderId: "475319454951",
+    appId: "1:475319454951:web:71c094e33294dd867f2642",
+    measurementId: "G-5H68M6P64D"
 };
 
-// Инициализация Firebase
-if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-  firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// ============================================================
+// DATABASE WRAPPER (Firebase Realtime Database)
+// ============================================================
+const dbFirebase = {
+    // --- Helper to convert snapshot to array with id ---
+    _toArray(snapshot) {
+        const data = snapshot.val();
+        if (!data) return [];
+        return Object.keys(data).map(key => ({ id: key, ...data[key] }));
+    },
+
+    // --- News ---
+    async getNews() {
+        const snapshot = await database.ref('news').once('value');
+        return this._toArray(snapshot);
+    },
+    async addNews(item) {
+        const ref = database.ref('news').push();
+        await ref.set(item);
+        return ref.key;
+    },
+    async deleteNews(id) {
+        await database.ref(`news/${id}`).remove();
+    },
+    async updateNews(id, newData) {
+        await database.ref(`news/${id}`).update(newData);
+    },
+
+    // --- Users ---
+    async getUsers() {
+        const snapshot = await database.ref('users').once('value');
+        return this._toArray(snapshot);
+    },
+    async addUser(item) {
+        // Check uniqueness of passport and fullName
+        const users = await this.getUsers();
+        if (users.some(u => u.passport === item.passport || u.fullName === item.fullName)) {
+            throw new Error('Пользователь с таким ФИО или паспортом уже существует');
+        }
+        const ref = database.ref('users').push();
+        await ref.set(item);
+        return ref.key;
+    },
+    async deleteUser(id) {
+        await database.ref(`users/${id}`).remove();
+    },
+    async updateUser(id, newData) {
+        await database.ref(`users/${id}`).update(newData);
+    },
+
+    // --- Members ---
+    async getMembers() {
+        const snapshot = await database.ref('members').once('value');
+        return this._toArray(snapshot);
+    },
+    async addMember(item) {
+        if (!item.photo) item.photo = '';
+        if (!item.position) item.position = '';
+        const ref = database.ref('members').push();
+        await ref.set(item);
+        return ref.key;
+    },
+    async deleteMember(id) {
+        await database.ref(`members/${id}`).remove();
+    },
+    async updateMember(id, newData) {
+        await database.ref(`members/${id}`).update(newData);
+    },
+
+    // --- Settings (key-value) ---
+    async getSetting(key) {
+        const snapshot = await database.ref(`settings/${key}`).once('value');
+        return snapshot.val();
+    },
+    async setSetting(key, value) {
+        await database.ref(`settings/${key}`).set(value);
+    },
+    async deleteSetting(key) {
+        await database.ref(`settings/${key}`).remove();
+    },
+
+    // --- Seed initial data ---
+    async seed() {
+        // Check news
+        const news = await this.getNews();
+        if (news.length === 0) {
+            const defaultNews = [
+                { title: 'День России — вместе к новым вершинам', date: '12.06.2026', text: 'Сегодня мы вместе со всей страной отмечаем важнейший государственный праздник — День России. Эта знаменательная дата напоминает нам о великой истории нашей родины...' },
+                { title: 'С Днём Великой Победы!', date: '09.05.2026', text: 'Партия «Новая Россия» и лично наш председатель от всей души поздравляют всех граждан с великим праздником 9 Мая. Этот торжественный день — символ мужества и единства...' },
+                { title: 'Личный пример важнее слов', date: '05.05.2026', text: 'Вчера в Центральной городской больнице прошло важное мероприятие — День донора. Председатель партии «Новая Россия» лично принял участие в акции...' }
+            ];
+            for (const item of defaultNews) {
+                await this.addNews(item);
+            }
+        }
+
+        // Check members
+        const members = await this.getMembers();
+        if (members.length === 0) {
+            const defaultMembers = [
+                { name: 'Сухомлин Александр Дмитриевич', position: 'Председатель партии', photo: '', role: 'leader' },
+                { name: 'Римская Мария Александровна', position: 'Первый заместитель Председателя, Кандидат в Губернаторы, Действующий Губернатор Рублевского федерального округа', photo: '', role: 'leader' },
+                { name: 'Пушмынц Леонид Ильич', position: 'Руководитель Высшего Совета, Председатель Совета Федерации', photo: '', role: 'leader' },
+                { name: 'Тиводар Евгений Александрович', position: 'Руководитель Центрального аппарата', photo: '', role: 'leader' },
+                { name: 'Райтман Тимур Александрович', position: 'Председатель Законодательного Собрания, Председатель Законодательного Собрания Рублевского федерального округа VIII созыва', photo: '', role: 'leader' },
+                { name: 'Мамаев Абрам Ахмедович', position: 'Заместитель Председателя Законодательного Собрания, Заместитель Председателя Законодательного Собрания Рублевского федерального округа VIII созыва', photo: '', role: 'leader' }
+            ];
+            for (const item of defaultMembers) {
+                await this.addMember(item);
+            }
+        }
+
+        // Default background setting
+        const bg = await this.getSetting('background');
+        if (bg === null) {
+            await this.setSetting('background', '');
+        }
+    }
+};
+
+// ============================================================
+// GLOBAL VARIABLES
+// ============================================================
+let isAdminLoggedIn = false;
+let currentUser = null;
+
+// ============================================================
+// RENDER FUNCTIONS
+// ============================================================
+async function renderNews() {
+    try {
+        const news = await dbFirebase.getNews();
+        const homeGrid = document.getElementById('newsGridHome');
+        const pressList = document.getElementById('pressArticlesList');
+        const adminList = document.getElementById('adminNewsList');
+
+        if (homeGrid) {
+            homeGrid.innerHTML = news.map(item => `
+                <div class="news-card">
+                    <div class="date">${item.date}</div>
+                    <h4>${item.title}</h4>
+                    <p>${item.text}</p>
+                    <a href="#" class="read-more" data-page="press">Читать →</a>
+                </div>
+            `).join('');
+        }
+
+        if (pressList) {
+            pressList.innerHTML = news.map(item => `
+                <div class="press-article">
+                    <div class="date">${item.date}</div>
+                    <h4>${item.title}</h4>
+                    <p>${item.text}</p>
+                </div>
+            `).join('');
+        }
+
+        if (adminList) {
+            adminList.innerHTML = news.map(item => `
+                <div class="admin-news-item">
+                    <div class="info">
+                        <div class="title">${item.title}</div>
+                        <div class="date">${item.date}</div>
+                    </div>
+                    <button class="btn btn-danger" data-news-id="${item.id}">Удалить</button>
+                </div>
+            `).join('');
+
+            adminList.querySelectorAll('[data-news-id]').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const id = this.getAttribute('data-news-id');
+                    await dbFirebase.deleteNews(id);
+                    await renderNews();
+                    await renderComposition();
+                });
+            });
+        }
+    } catch (e) {
+        console.error('renderNews error:', e);
+    }
 }
 
-const db = typeof firebase !== 'undefined' && firebase.apps.length ? firebase.firestore() : null;
+async function renderComposition() {
+    try {
+        const members = await dbFirebase.getMembers();
+        const container = document.getElementById('compositionContainer');
+        if (!container) return;
 
-// Модальное окно
-const modal = document.getElementById('joinModal');
-const openModalBtn = document.getElementById('openModalBtn');
-const closeModalBtn = document.getElementById('closeModalBtn');
-const partyForm = document.getElementById('partyForm');
-const formStatus = document.getElementById('formStatus');
+        const leaders = members.filter(m => m.role === 'leader');
+        const deputies = members.filter(m => m.role === 'deputy');
+        const membersList = members.filter(m => m.role === 'member');
 
-function openJoinModal() {
-  modal.style.display = 'flex';
+        let html = '';
+        if (leaders.length) {
+            html += `<div class="comp-section"><h2>Руководство</h2><div class="comp-grid">`;
+            leaders.forEach(m => {
+                const photoHtml = m.photo && m.photo.startsWith('data:image') ?
+                    `<img class="comp-photo" src="${m.photo}" alt="${m.name}" />` :
+                    `<div class="comp-photo" style="display:flex;align-items:center;justify-content:center;background:var(--light-gray);color:var(--dark-blue);font-size:32px;font-weight:700;">${m.name.charAt(0)}</div>`;
+                html += `
+                    <div class="comp-card">
+                        ${photoHtml}
+                        <div class="name">${m.name}</div>
+                        <div class="position">${m.position || 'Без должности'}</div>
+                        <div class="role">Руководство</div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+        }
+        if (deputies.length) {
+            html += `<div class="comp-section"><h2>Депутаты</h2><div class="comp-grid">`;
+            deputies.forEach(m => {
+                const photoHtml = m.photo && m.photo.startsWith('data:image') ?
+                    `<img class="comp-photo" src="${m.photo}" alt="${m.name}" />` :
+                    `<div class="comp-photo" style="display:flex;align-items:center;justify-content:center;background:var(--light-gray);color:var(--dark-blue);font-size:32px;font-weight:700;">${m.name.charAt(0)}</div>`;
+                html += `
+                    <div class="comp-card">
+                        ${photoHtml}
+                        <div class="name">${m.name}</div>
+                        <div class="position">${m.position || 'Депутат'}</div>
+                        <div class="role">Депутат</div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+        }
+        if (membersList.length) {
+            html += `<div class="comp-section"><h2>Члены партии</h2><div class="comp-grid">`;
+            membersList.forEach(m => {
+                const photoHtml = m.photo && m.photo.startsWith('data:image') ?
+                    `<img class="comp-photo" src="${m.photo}" alt="${m.name}" />` :
+                    `<div class="comp-photo" style="display:flex;align-items:center;justify-content:center;background:var(--light-gray);color:var(--dark-blue);font-size:32px;font-weight:700;">${m.name.charAt(0)}</div>`;
+                html += `
+                    <div class="comp-card">
+                        ${photoHtml}
+                        <div class="name">${m.name}</div>
+                        <div class="position">${m.position || 'Член партии'}</div>
+                        <div class="role">Член партии</div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+        }
+        container.innerHTML = html || '<p>Состав пока пуст.</p>';
+        document.getElementById('totalMembers').textContent = members.length;
+    } catch (e) {
+        console.error('renderComposition error:', e);
+    }
 }
 
-function closeJoinModal() {
-  modal.style.display = 'none';
-  formStatus.innerText = '';
-  partyForm.reset();
+async function renderApplications() {
+    try {
+        const users = await dbFirebase.getUsers();
+        const list = document.getElementById('applicationsList');
+        if (!list) return;
+
+        if (users.length === 0) {
+            list.innerHTML = '<p>Заявок пока нет.</p>';
+            return;
+        }
+
+        list.innerHTML = users.map(user => `
+            <div class="application-item">
+                <div class="app-header">
+                    <span class="app-name">${user.fullName}</span>
+                    <span class="app-status ${user.status}">${user.status === 'pending' ? 'На рассмотрении' : user.status === 'approved' ? 'Одобрена' : 'Отклонена'}</span>
+                </div>
+                <div class="app-details">
+                    <p><strong>Возраст (IC):</strong> ${user.icAge} | <strong>OOC:</strong> ${user.oocAge}</p>
+                    <p><strong>Паспорт:</strong> ${user.passport} | <strong>Discord:</strong> ${user.discord}</p>
+                    <p><strong>Мотивация:</strong> ${user.motivation}</p>
+                    <p><strong>Поддержка:</strong> ${user.support}</p>
+                    ${user.passportLink ? `<p><strong>Ссылка на паспорт:</strong> <a href="${user.passportLink}" target="_blank">${user.passportLink}</a></p>` : ''}
+                </div>
+                ${user.status === 'pending' ? `
+                <div class="app-actions">
+                    <button class="btn btn-success" data-user-id="${user.id}" data-action="approve">Одобрить</button>
+                    <button class="btn btn-danger" data-user-id="${user.id}" data-action="reject">Отклонить</button>
+                </div>` : ''}
+            </div>
+        `).join('');
+
+        list.querySelectorAll('[data-action]').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const userId = this.getAttribute('data-user-id');
+                const action = this.getAttribute('data-action');
+                await handleApplication(userId, action);
+            });
+        });
+    } catch (e) {
+        console.error('renderApplications error:', e);
+    }
 }
 
-openModalBtn.addEventListener('click', openJoinModal);
-closeModalBtn.addEventListener('click', closeJoinModal);
+async function handleApplication(userId, action) {
+    try {
+        const users = await dbFirebase.getUsers();
+        const user = users.find(u => u.id === userId);
+        if (!user) return;
 
-window.addEventListener('click', (e) => {
-  if (e.target === modal) closeJoinModal();
-});
+        if (action === 'approve') {
+            user.status = 'approved';
+            await dbFirebase.updateUser(userId, { status: 'approved' });
+            await dbFirebase.addMember({ name: user.fullName, position: 'Член партии', photo: '', role: 'member' });
+            await renderApplications();
+            await renderComposition();
+            await renderAdminMembers();
+        } else if (action === 'reject') {
+            user.status = 'rejected';
+            await dbFirebase.updateUser(userId, { status: 'rejected' });
+            await renderApplications();
+        }
+    } catch (e) {
+        console.error('handleApplication error:', e);
+    }
+}
 
-// Отправка формы в Firebase Firestore
-partyForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
+async function renderAdminMembers() {
+    try {
+        const members = await dbFirebase.getMembers();
+        const list = document.getElementById('adminMembersList');
+        if (!list) return;
+        if (members.length === 0) {
+            list.innerHTML = '<p>В составе никого нет.</p>';
+            return;
+        }
+        list.innerHTML = members.map(m => `
+            <div class="admin-news-item">
+                <div class="info">
+                    <div class="title">${m.name}</div>
+                    <div class="date">${m.position || 'Без должности'} • ${m.role === 'leader' ? 'Руководство' : m.role === 'deputy' ? 'Депутат' : 'Член партии'}</div>
+                </div>
+                <button class="btn btn-danger" data-member-id="${m.id}">Удалить</button>
+            </div>
+        `).join('');
 
-  const formData = {
-    fullName: document.getElementById('fullName').value,
-    phone: document.getElementById('phone').value,
-    email: document.getElementById('email').value,
-    region: document.getElementById('region').value,
-    createdAt: new Date().toISOString()
-  };
+        list.querySelectorAll('[data-member-id]').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const id = this.getAttribute('data-member-id');
+                if (confirm('Удалить этого члена из состава?')) {
+                    await dbFirebase.deleteMember(id);
+                    await renderAdminMembers();
+                    await renderComposition();
+                }
+            });
+        });
+    } catch (e) {
+        console.error('renderAdminMembers error:', e);
+    }
+}
 
-  formStatus.style.color = 'var(--primary)';
-  formStatus.innerText = 'Отправка заявки...';
-
-  try {
-    if (db) {
-      // Сохранение в коллекцию 'applications'
-      await db.collection('applications').add(formData);
+// ============================================================
+// BACKGROUND
+// ============================================================
+async function applyBackground() {
+    const bg = await dbFirebase.getSetting('background');
+    if (bg && bg.startsWith('data:image')) {
+        document.body.style.backgroundImage = `url(${bg})`;
     } else {
-      console.warn('Firebase не настроен. Данные формы:', formData);
+        document.body.style.backgroundImage = '';
+    }
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+function setupEventListeners() {
+    // ----- MODALS -----
+    const loginModal = document.getElementById('loginModal');
+    const adminModal = document.getElementById('adminModal');
+    const profileModal = document.getElementById('profileModal');
+    const loginBtn = document.getElementById('loginBtn');
+    const profileBtn = document.getElementById('profileBtn');
+    const loginModalClose = document.getElementById('loginModalClose');
+    const adminModalClose = document.getElementById('adminModalClose');
+    const profileModalClose = document.getElementById('profileModalClose');
+    const loginForm = document.getElementById('loginForm');
+    const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+    const profileLogin = document.getElementById('profileLogin');
+    const profileLogoutBtn = document.getElementById('profileLogoutBtn');
+    const profileLoginForm = document.getElementById('profileLoginForm');
+    const profileContent = document.getElementById('profileContent');
+    const profileInfo = document.getElementById('profileInfo');
+
+    function openLoginModal() { loginModal.classList.add('open'); }
+    function closeLoginModal() { loginModal.classList.remove('open'); }
+    function openAdminModal() { adminModal.classList.add('open'); }
+    function closeAdminModal() { adminModal.classList.remove('open'); }
+    function openProfileModal() { profileModal.classList.add('open'); }
+    function closeProfileModal() { profileModal.classList.remove('open'); }
+
+    loginBtn.addEventListener('click', function() {
+        if (isAdminLoggedIn) {
+            openAdminModal();
+            renderApplications();
+            renderAdminMembers();
+        } else {
+            openLoginModal();
+        }
+    });
+
+    profileBtn.addEventListener('click', function() {
+        openProfileModal();
+        if (currentUser) {
+            showProfileContent(currentUser);
+        } else {
+            profileLoginForm.style.display = 'block';
+            profileContent.style.display = 'none';
+        }
+    });
+
+    loginModalClose.addEventListener('click', closeLoginModal);
+    adminModalClose.addEventListener('click', closeAdminModal);
+    profileModalClose.addEventListener('click', closeProfileModal);
+    loginModal.addEventListener('click', function(e) { if (e.target === this) closeLoginModal(); });
+    adminModal.addEventListener('click', function(e) { if (e.target === this) closeAdminModal(); });
+    profileModal.addEventListener('click', function(e) { if (e.target === this) closeProfileModal(); });
+
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        if (username === 'admin' && password === 'admin') {
+            isAdminLoggedIn = true;
+            loginBtn.textContent = 'Админ-панель';
+            loginBtn.classList.add('logged-in');
+            closeLoginModal();
+            openAdminModal();
+            renderApplications();
+            renderAdminMembers();
+        } else {
+            alert('Неверный логин или пароль!');
+        }
+    });
+
+    adminLogoutBtn.addEventListener('click', function() {
+        isAdminLoggedIn = false;
+        loginBtn.textContent = 'Вход';
+        loginBtn.classList.remove('logged-in');
+        closeAdminModal();
+    });
+
+    profileLogin.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const fullName = document.getElementById('profileLoginName').value.trim();
+        const passport = document.getElementById('profileLoginPassport').value.trim();
+        const users = await dbFirebase.getUsers();
+        const user = users.find(u => u.fullName === fullName && u.passport === passport);
+        if (user) {
+            currentUser = user;
+            showProfileContent(user);
+        } else {
+            alert('Пользователь с таким ФИО и паспортом не найден.');
+        }
+    });
+
+    function showProfileContent(user) {
+        profileLoginForm.style.display = 'none';
+        profileContent.style.display = 'block';
+        const statusText = user.status === 'pending' ? 'На рассмотрении' : user.status === 'approved' ? 'Одобрена' : 'Отклонена';
+        profileInfo.innerHTML = `
+            <h3 style="margin-bottom:8px;">${user.fullName}</h3>
+            <p><strong>Статус заявки:</strong> <span class="app-status ${user.status}">${statusText}</span></p>
+            <p><strong>Игровой возраст:</strong> ${user.icAge}</p>
+            <p><strong>Реальный возраст:</strong> ${user.oocAge}</p>
+            <p><strong>Discord:</strong> ${user.discord}</p>
+            <p><strong>Мотивация:</strong> ${user.motivation}</p>
+            <p><strong>Поддержка:</strong> ${user.support}</p>
+            ${user.status === 'approved' ? '<p style="color:#2e7d32; font-weight:600;">✓ Вы приняты в партию! Добро пожаловать!</p>' : ''}
+            ${user.status === 'rejected' ? '<p style="color:#d32f2f; font-weight:600;">✗ К сожалению, ваша заявка отклонена.</p>' : ''}
+        `;
     }
 
-    formStatus.style.color = 'green';
-    formStatus.innerText = 'Заявка успешно отправлена!';
-    setTimeout(() => {
-      closeJoinModal();
-    }, 2000);
+    profileLogoutBtn.addEventListener('click', function() {
+        currentUser = null;
+        profileLoginForm.style.display = 'block';
+        profileContent.style.display = 'none';
+        document.getElementById('profileLoginName').value = '';
+        document.getElementById('profileLoginPassport').value = '';
+        closeProfileModal();
+    });
 
-  } catch (error) {
-    console.error('Ошибка при отправке:', error);
-    formStatus.style.color = 'var(--accent)';
-    formStatus.innerText = 'Произошла ошибка. Попробуйте позже.';
-  }
+    // ----- ADMIN FORMS -----
+    const addNewsForm = document.getElementById('addNewsForm');
+    const addMemberForm = document.getElementById('addMemberForm');
+    const backgroundForm = document.getElementById('backgroundForm');
+    const resetBgBtn = document.getElementById('resetBgBtn');
+
+    addNewsForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const title = document.getElementById('newsTitle').value;
+        const date = document.getElementById('newsDate').value;
+        const text = document.getElementById('newsText').value;
+        if (title && date && text) {
+            await dbFirebase.addNews({ title, date, text });
+            addNewsForm.reset();
+            await renderNews();
+        } else {
+            alert('Заполните все поля!');
+        }
+    });
+
+    addMemberForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const name = document.getElementById('memberName').value.trim();
+        const position = document.getElementById('memberPosition').value.trim();
+        const fileInput = document.getElementById('memberPhoto');
+        const role = document.getElementById('memberRole').value;
+
+        if (!name || !position) {
+            alert('Введите ФИО и должность!');
+            return;
+        }
+
+        let photoData = '';
+        if (fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            if (!file.type.startsWith('image/')) {
+                alert('Пожалуйста, выберите файл изображения.');
+                return;
+            }
+            photoData = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e.target.error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        await dbFirebase.addMember({ name, position, photo: photoData, role });
+        await renderAdminMembers();
+        await renderComposition();
+        addMemberForm.reset();
+        fileInput.value = '';
+    });
+
+    backgroundForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById('bgImage');
+        if (!fileInput.files || !fileInput.files[0]) {
+            alert('Выберите изображение.');
+            return;
+        }
+        const file = fileInput.files[0];
+        if (!file.type.startsWith('image/')) {
+            alert('Пожалуйста, выберите файл изображения.');
+            return;
+        }
+        const photoData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e.target.error);
+            reader.readAsDataURL(file);
+        });
+        await dbFirebase.setSetting('background', photoData);
+        await applyBackground();
+        alert('Фон успешно обновлён!');
+        fileInput.value = '';
+    });
+
+    resetBgBtn.addEventListener('click', async function() {
+        if (confirm('Сбросить фоновое изображение?')) {
+            await dbFirebase.setSetting('background', '');
+            await applyBackground();
+            alert('Фон сброшен.');
+        }
+    });
+
+    // ----- NAVIGATION -----
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const pageSections = {
+        home: document.getElementById('page-home'),
+        about: document.getElementById('page-about'),
+        symbols: document.getElementById('page-symbols'),
+        composition: document.getElementById('page-composition'),
+        press: document.getElementById('page-press'),
+        join: document.getElementById('page-join'),
+    };
+    const allPageTriggers = document.querySelectorAll('[data-page]');
+
+    function showPage(pageId) {
+        Object.values(pageSections).forEach(el => el.classList.remove('active'));
+        const target = pageSections[pageId];
+        if (target) target.classList.add('active');
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.dataset.page === pageId) {
+                link.classList.add('active');
+            }
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = this.dataset.page;
+            if (page && pageSections[page]) {
+                showPage(page);
+            }
+        });
+    });
+
+    allPageTriggers.forEach(el => {
+        el.addEventListener('click', function(e) {
+            const page = this.dataset.page;
+            if (page && pageSections[page]) {
+                e.preventDefault();
+                showPage(page);
+            }
+        });
+    });
+
+    // ----- JOIN FORM -----
+    document.getElementById('joinForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const fullName = document.getElementById('joinFullName').value.trim();
+        const icAge = parseInt(document.getElementById('joinIcAge').value);
+        const oocAge = parseInt(document.getElementById('joinOocAge').value);
+        const passport = document.getElementById('joinPassport').value.trim();
+        const passportLink = document.getElementById('joinPassportLink').value.trim();
+        const motivation = document.getElementById('joinMotivation').value.trim();
+        const support = document.getElementById('joinSupport').value.trim();
+        const discord = document.getElementById('joinDiscord').value.trim();
+
+        if (!fullName || !icAge || !oocAge || !passport || !passportLink || !motivation || !support || !discord) {
+            alert('Заполните все поля!');
+            return;
+        }
+
+        try {
+            await dbFirebase.addUser({
+                fullName,
+                icAge,
+                oocAge,
+                passport,
+                passportLink,
+                motivation,
+                support,
+                discord,
+                status: 'pending'
+            });
+            alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
+            this.reset();
+            if (isAdminLoggedIn) await renderApplications();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
+    // ----- ADMIN TABS -----
+    document.querySelectorAll('.admin-tabs button').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.admin-tabs button').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            const tabName = this.getAttribute('data-tab');
+            document.querySelectorAll('.admin-panel-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('adminTab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+            if (tabName === 'applications') renderApplications();
+            if (tabName === 'members') renderAdminMembers();
+        });
+    });
+
+    // Set default active page
+    const currentActive = document.querySelector('.nav-links a.active');
+    if (!currentActive) {
+        const homeLink = document.querySelector('.nav-links a[data-page="home"]');
+        if (homeLink) homeLink.classList.add('active');
+    }
+}
+
+// ============================================================
+// STARTUP
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+    (async function() {
+        try {
+            await dbFirebase.seed();
+            await renderNews();
+            await renderComposition();
+            await renderApplications();
+            await renderAdminMembers();
+            const members = await dbFirebase.getMembers();
+            document.getElementById('totalMembers').textContent = members.length;
+            await applyBackground();
+        } catch (e) {
+            console.error('Ошибка инициализации:', e);
+        }
+    })();
 });
