@@ -1,5 +1,5 @@
 // ============================================================
-// FIREBASE CONFIGURATION
+// FIREBASE CONFIG
 // ============================================================
 const firebaseConfig = {
     apiKey: "AIzaSyA9xIIgwbaZ5NKRgGHDGz7lju6q2saTzAc",
@@ -12,22 +12,19 @@ const firebaseConfig = {
     measurementId: "G-5H68M6P64D"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // ============================================================
-// DATABASE WRAPPER (Firebase Realtime Database)
+// DATABASE WRAPPER
 // ============================================================
 const dbFirebase = {
-    // --- Helper to convert snapshot to array with id ---
     _toArray(snapshot) {
         const data = snapshot.val();
         if (!data) return [];
         return Object.keys(data).map(key => ({ id: key, ...data[key] }));
     },
 
-    // --- News ---
     async getNews() {
         const snapshot = await database.ref('news').once('value');
         return this._toArray(snapshot);
@@ -44,13 +41,11 @@ const dbFirebase = {
         await database.ref(`news/${id}`).update(newData);
     },
 
-    // --- Users ---
     async getUsers() {
         const snapshot = await database.ref('users').once('value');
         return this._toArray(snapshot);
     },
     async addUser(item) {
-        // Check uniqueness of passport and fullName
         const users = await this.getUsers();
         if (users.some(u => u.passport === item.passport || u.fullName === item.fullName)) {
             throw new Error('Пользователь с таким ФИО или паспортом уже существует');
@@ -66,7 +61,6 @@ const dbFirebase = {
         await database.ref(`users/${id}`).update(newData);
     },
 
-    // --- Members ---
     async getMembers() {
         const snapshot = await database.ref('members').once('value');
         return this._toArray(snapshot);
@@ -85,7 +79,6 @@ const dbFirebase = {
         await database.ref(`members/${id}`).update(newData);
     },
 
-    // --- Settings (key-value) ---
     async getSetting(key) {
         const snapshot = await database.ref(`settings/${key}`).once('value');
         return snapshot.val();
@@ -97,9 +90,7 @@ const dbFirebase = {
         await database.ref(`settings/${key}`).remove();
     },
 
-    // --- Seed initial data ---
     async seed() {
-        // Check news
         const news = await this.getNews();
         if (news.length === 0) {
             const defaultNews = [
@@ -112,7 +103,6 @@ const dbFirebase = {
             }
         }
 
-        // Check members
         const members = await this.getMembers();
         if (members.length === 0) {
             const defaultMembers = [
@@ -128,7 +118,6 @@ const dbFirebase = {
             }
         }
 
-        // Default background setting
         const bg = await this.getSetting('background');
         if (bg === null) {
             await this.setSetting('background', '');
@@ -349,11 +338,14 @@ async function renderAdminMembers() {
                     <div class="title">${m.name}</div>
                     <div class="date">${m.position || 'Без должности'} • ${m.role === 'leader' ? 'Руководство' : m.role === 'deputy' ? 'Депутат' : 'Член партии'}</div>
                 </div>
-                <button class="btn btn-danger" data-member-id="${m.id}">Удалить</button>
+                <div class="btn-group">
+                    <button class="btn btn-edit btn-sm" data-member-id="${m.id}">✏️ Редактировать</button>
+                    <button class="btn btn-danger btn-sm" data-member-id="${m.id}">Удалить</button>
+                </div>
             </div>
         `).join('');
 
-        list.querySelectorAll('[data-member-id]').forEach(btn => {
+        list.querySelectorAll('.btn-danger[data-member-id]').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const id = this.getAttribute('data-member-id');
                 if (confirm('Удалить этого члена из состава?')) {
@@ -363,10 +355,90 @@ async function renderAdminMembers() {
                 }
             });
         });
+
+        list.querySelectorAll('.btn-edit[data-member-id]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-member-id');
+                openEditMemberModal(id);
+            });
+        });
     } catch (e) {
         console.error('renderAdminMembers error:', e);
     }
 }
+
+// ============================================================
+// EDIT MEMBER MODAL
+// ============================================================
+const editMemberModal = document.getElementById('editMemberModal');
+const editMemberModalClose = document.getElementById('editMemberModalClose');
+const editMemberForm = document.getElementById('editMemberForm');
+const editMemberId = document.getElementById('editMemberId');
+const editMemberName = document.getElementById('editMemberName');
+const editMemberPosition = document.getElementById('editMemberPosition');
+const editMemberPhoto = document.getElementById('editMemberPhoto');
+const editMemberRole = document.getElementById('editMemberRole');
+
+async function openEditMemberModal(memberId) {
+    const members = await dbFirebase.getMembers();
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+
+    editMemberId.value = memberId;
+    editMemberName.value = member.name;
+    editMemberPosition.value = member.position || '';
+    editMemberRole.value = member.role || 'member';
+    editMemberPhoto.value = '';
+    editMemberModal.classList.add('open');
+}
+
+function closeEditMemberModal() {
+    editMemberModal.classList.remove('open');
+}
+
+editMemberModalClose.addEventListener('click', closeEditMemberModal);
+editMemberModal.addEventListener('click', function(e) {
+    if (e.target === this) closeEditMemberModal();
+});
+
+editMemberForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const id = editMemberId.value;
+    const name = editMemberName.value.trim();
+    const position = editMemberPosition.value.trim();
+    const role = editMemberRole.value;
+
+    if (!name || !position) {
+        alert('Заполните ФИО и должность!');
+        return;
+    }
+
+    let photoData = null;
+    if (editMemberPhoto.files && editMemberPhoto.files[0]) {
+        const file = editMemberPhoto.files[0];
+        if (!file.type.startsWith('image/')) {
+            alert('Пожалуйста, выберите файл изображения.');
+            return;
+        }
+        photoData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e.target.error);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    const updateData = { name, position, role };
+    if (photoData) {
+        updateData.photo = photoData;
+    }
+
+    await dbFirebase.updateMember(id, updateData);
+    await renderAdminMembers();
+    await renderComposition();
+    closeEditMemberModal();
+    alert('✅ Данные члена партии обновлены!');
+});
 
 // ============================================================
 // BACKGROUND
