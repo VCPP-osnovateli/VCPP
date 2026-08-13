@@ -79,7 +79,6 @@ const dbFirebase = {
         await database.ref(`members/${id}`).update(newData);
     },
 
-    // Настройки (теперь включая символику)
     async getSetting(key) {
         const snapshot = await database.ref(`settings/${key}`).once('value');
         return snapshot.val();
@@ -89,17 +88,6 @@ const dbFirebase = {
     },
     async deleteSetting(key) {
         await database.ref(`settings/${key}`).remove();
-    },
-
-    // Символика — используем ключи в settings
-    async getSymbol(symbolKey) {
-        return this.getSetting(symbolKey);
-    },
-    async setSymbol(symbolKey, imageData) {
-        await this.setSetting(symbolKey, imageData);
-    },
-    async resetSymbol(symbolKey) {
-        await this.deleteSetting(symbolKey);
     },
 
     async getElections() {
@@ -166,8 +154,6 @@ const dbFirebase = {
             };
             await this.setElections(defaultElections);
         }
-
-        // Символика не заполняется, чтобы оставались пустые поля
     }
 };
 
@@ -188,15 +174,22 @@ async function renderNews() {
         const pressList = document.getElementById('pressArticlesList');
         const adminList = document.getElementById('adminNewsList');
 
+        // Проверяем настройку "Показывать превью новостей"
+        const showPreview = localStorage.getItem('showNewsPreview') !== 'false';
+
         if (homeGrid) {
-            homeGrid.innerHTML = news.map(item => `
-                <div class="news-card">
-                    <div class="date">${item.date}</div>
-                    <h4>${item.title}</h4>
-                    <p>${item.text}</p>
-                    <a href="#" class="read-more" data-page="press">Читать →</a>
-                </div>
-            `).join('');
+            if (showPreview) {
+                homeGrid.innerHTML = news.map(item => `
+                    <div class="news-card">
+                        <div class="date">${item.date}</div>
+                        <h4>${item.title}</h4>
+                        <p>${item.text}</p>
+                        <a href="#" class="read-more" data-page="press">Читать →</a>
+                    </div>
+                `).join('');
+            } else {
+                homeGrid.innerHTML = '<p style="text-align:center; color:#6a7a8e; padding:20px;">Превью новостей скрыто в настройках.</p>';
+            }
         }
 
         if (pressList) {
@@ -370,20 +363,38 @@ async function handleApplication(userId, action) {
     }
 }
 
-// Удаление всех рассмотренных заявок (approved/rejected)
-document.getElementById('clearProcessedBtn').addEventListener('click', async function() {
-    if (!confirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
+// Удаление рассмотренных заявок
+document.getElementById('deleteApprovedBtn').addEventListener('click', async function() {
+    if (!confirm('Удалить все одобренные заявки?')) return;
     const users = await dbFirebase.getUsers();
-    const processed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
-    if (processed.length === 0) {
-        alert('Нет рассмотренных заявок для удаления.');
-        return;
-    }
-    for (const user of processed) {
+    const approved = users.filter(u => u.status === 'approved');
+    for (const user of approved) {
         await dbFirebase.deleteUser(user.id);
     }
     await renderApplications();
-    alert(`Удалено ${processed.length} заявок.`);
+    alert(`Удалено ${approved.length} одобренных заявок.`);
+});
+
+document.getElementById('deleteRejectedBtn').addEventListener('click', async function() {
+    if (!confirm('Удалить все отклонённые заявки?')) return;
+    const users = await dbFirebase.getUsers();
+    const rejected = users.filter(u => u.status === 'rejected');
+    for (const user of rejected) {
+        await dbFirebase.deleteUser(user.id);
+    }
+    await renderApplications();
+    alert(`Удалено ${rejected.length} отклонённых заявок.`);
+});
+
+document.getElementById('deleteAllReviewedBtn').addEventListener('click', async function() {
+    if (!confirm('Удалить все рассмотренные заявки (одобренные и отклонённые)?')) return;
+    const users = await dbFirebase.getUsers();
+    const reviewed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
+    for (const user of reviewed) {
+        await dbFirebase.deleteUser(user.id);
+    }
+    await renderApplications();
+    alert(`Удалено ${reviewed.length} рассмотренных заявок.`);
 });
 
 async function renderAdminMembers() {
@@ -627,99 +638,6 @@ document.getElementById('electionsForm').addEventListener('submit', async functi
 });
 
 // ============================================================
-// SYMBOLS (публичная страница)
-// ============================================================
-async function renderSymbolsPage() {
-    const container = document.getElementById('symbolsContainer');
-    if (!container) return;
-
-    const gerb = await dbFirebase.getSymbol('symbol_gerb');
-    const stamp = await dbFirebase.getSymbol('symbol_stamp');
-    const seal = await dbFirebase.getSymbol('symbol_seal');
-
-    const symbols = [
-        { key: 'gerb', label: 'Герб ВЦПП', desc: 'Официальный герб партии.', image: gerb },
-        { key: 'stamp', label: 'Штамп', desc: 'Официальный штамп организации.', image: stamp },
-        { key: 'seal', label: 'Печать', desc: 'Официальная печать партии.', image: seal }
-    ];
-
-    let html = '';
-    symbols.forEach(s => {
-        const imgHtml = s.image && s.image.startsWith('data:image') ?
-            `<img src="${s.image}" alt="${s.label}" style="max-width:200px; max-height:200px; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />` :
-            `<div style="width:200px; height:200px; display:flex; align-items:center; justify-content:center; background:var(--light-gray); border-radius:12px; color:#6a7a8e; font-size:14px;">Изображение не загружено</div>`;
-        html += `
-            <div class="symbol-card">
-                <div class="symbol-image">
-                    ${imgHtml}
-                </div>
-                <h3>${s.label}</h3>
-                <p>${s.desc}</p>
-            </div>
-        `;
-    });
-    container.innerHTML = html;
-}
-
-// ============================================================
-// SYMBOLS ADMIN
-// ============================================================
-async function loadSymbolsAdmin() {
-    const gerb = await dbFirebase.getSymbol('symbol_gerb');
-    const stamp = await dbFirebase.getSymbol('symbol_stamp');
-    const seal = await dbFirebase.getSymbol('symbol_seal');
-
-    const previewGerb = document.getElementById('symbolGerbPreview');
-    const previewStamp = document.getElementById('symbolStampPreview');
-    const previewSeal = document.getElementById('symbolSealPreview');
-
-    previewGerb.innerHTML = gerb ? `<img src="${gerb}" style="max-width:100px; border-radius:8px;" />` : '';
-    previewStamp.innerHTML = stamp ? `<img src="${stamp}" style="max-width:100px; border-radius:8px;" />` : '';
-    previewSeal.innerHTML = seal ? `<img src="${seal}" style="max-width:100px; border-radius:8px;" />` : '';
-}
-
-document.getElementById('symbolsAdminForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const fileInputs = {
-        gerb: document.getElementById('symbolGerbFile'),
-        stamp: document.getElementById('symbolStampFile'),
-        seal: document.getElementById('symbolSealFile')
-    };
-
-    for (const [key, input] of Object.entries(fileInputs)) {
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            if (!file.type.startsWith('image/')) {
-                alert(`Файл для ${key} не является изображением.`);
-                return;
-            }
-            const data = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(e.target.error);
-                reader.readAsDataURL(file);
-            });
-            await dbFirebase.setSymbol(`symbol_${key}`, data);
-        }
-    }
-
-    await loadSymbolsAdmin();
-    await renderSymbolsPage();
-    alert('✅ Символика обновлена!');
-});
-
-document.getElementById('resetSymbolsBtn').addEventListener('click', async function() {
-    if (!confirm('Сбросить все изображения символики?')) return;
-    await dbFirebase.deleteSetting('symbol_gerb');
-    await dbFirebase.deleteSetting('symbol_stamp');
-    await dbFirebase.deleteSetting('symbol_seal');
-    await loadSymbolsAdmin();
-    await renderSymbolsPage();
-    alert('Символика сброшена.');
-});
-
-// ============================================================
 // PROFILE FUNCTIONS
 // ============================================================
 function showProfileContent(user) {
@@ -798,12 +716,22 @@ document.getElementById('editProfileForm').addEventListener('submit', async func
         return;
     }
 
-    const updatedData = { fullName, icAge, oocAge, discord, motivation, support };
+    const updatedData = {
+        fullName,
+        icAge,
+        oocAge,
+        discord,
+        motivation,
+        support
+    };
+
     try {
         await dbFirebase.updateUser(currentUser.id, updatedData);
         currentUser = { ...currentUser, ...updatedData };
         showProfileContent(currentUser);
-        if (isAdminLoggedIn) await renderApplications();
+        if (isAdminLoggedIn) {
+            await renderApplications();
+        }
         alert('✅ Данные профиля обновлены!');
     } catch (error) {
         alert('Ошибка при обновлении профиля: ' + error.message);
@@ -813,13 +741,16 @@ document.getElementById('editProfileForm').addEventListener('submit', async func
 document.getElementById('withdrawApplicationBtn').addEventListener('click', async function() {
     if (!currentUser || currentUser.status !== 'pending') return;
     if (!confirm('Вы уверены, что хотите отозвать свою заявку?')) return;
+
     try {
         await dbFirebase.deleteUser(currentUser.id);
         currentUser = null;
         saveUserState(null);
         document.getElementById('profileLoginForm').style.display = 'block';
         document.getElementById('profileContent').style.display = 'none';
-        if (isAdminLoggedIn) await renderApplications();
+        if (isAdminLoggedIn) {
+            await renderApplications();
+        }
         alert('Заявка отозвана.');
         closeProfileModal();
     } catch (error) {
@@ -833,6 +764,92 @@ document.getElementById('resubmitApplicationBtn').addEventListener('click', func
     showPage('join');
     document.getElementById('joinForm').reset();
     alert('Заполните анкету заново для повторной подачи заявки.');
+});
+
+// ============================================================
+// SETTINGS FUNCTIONS
+// ============================================================
+function loadSettings() {
+    // Тема
+    const theme = localStorage.getItem('theme') || 'light';
+    document.getElementById('themeSelect').value = theme;
+    applyTheme(theme);
+
+    // Размер шрифта
+    const fontSize = localStorage.getItem('fontSize') || 'medium';
+    document.getElementById('fontSizeSelect').value = fontSize;
+    applyFontSize(fontSize);
+
+    // Превью новостей
+    const showPreview = localStorage.getItem('showNewsPreview') !== 'false';
+    document.getElementById('showNewsPreview').checked = showPreview;
+
+    // Анимации
+    const enableAnimations = localStorage.getItem('enableAnimations') !== 'false';
+    document.getElementById('enableAnimations').checked = enableAnimations;
+    applyAnimations(enableAnimations);
+}
+
+function applyTheme(theme) {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+        root.style.setProperty('--dark-blue', '#1a1a2e');
+        root.style.setProperty('--white', '#2d2d44');
+        root.style.setProperty('--light-gray', '#3d3d5c');
+        root.style.setProperty('--text-dark', '#f0f0f0');
+        root.style.setProperty('--shadow', '0 8px 32px rgba(0,0,0,0.5)');
+        document.body.style.color = '#f0f0f0';
+    } else {
+        root.style.setProperty('--dark-blue', '#0E2A47');
+        root.style.setProperty('--white', '#FFFFFF');
+        root.style.setProperty('--light-gray', '#D9DEE5');
+        root.style.setProperty('--text-dark', '#1A1A2E');
+        root.style.setProperty('--shadow', '0 8px 32px rgba(14, 42, 71, 0.15)');
+        document.body.style.color = '#1A1A2E';
+    }
+}
+
+function applyFontSize(size) {
+    const sizes = {
+        small: '14px',
+        medium: '16px',
+        large: '18px',
+        xlarge: '20px'
+    };
+    document.body.style.fontSize = sizes[size] || '16px';
+}
+
+function applyAnimations(enabled) {
+    const style = document.getElementById('animationStyle');
+    if (enabled) {
+        if (style) style.remove();
+        document.querySelectorAll('.page-section').forEach(el => {
+            el.style.animation = 'fadeUp 0.4s ease';
+        });
+    } else {
+        document.querySelectorAll('.page-section').forEach(el => {
+            el.style.animation = 'none';
+        });
+    }
+}
+
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const theme = document.getElementById('themeSelect').value;
+    const fontSize = document.getElementById('fontSizeSelect').value;
+    const showPreview = document.getElementById('showNewsPreview').checked;
+    const enableAnimations = document.getElementById('enableAnimations').checked;
+
+    localStorage.setItem('theme', theme);
+    localStorage.setItem('fontSize', fontSize);
+    localStorage.setItem('showNewsPreview', showPreview);
+    localStorage.setItem('enableAnimations', enableAnimations);
+
+    applyTheme(theme);
+    applyFontSize(fontSize);
+    applyAnimations(enableAnimations);
+    renderNews(); // обновляем превью новостей
+    alert('✅ Настройки сохранены!');
 });
 
 // ============================================================
@@ -891,6 +908,7 @@ async function restoreState() {
 // EVENT LISTENERS
 // ============================================================
 function setupEventListeners() {
+    // ----- MODALS -----
     const loginModal = document.getElementById('loginModal');
     const adminModal = document.getElementById('adminModal');
     const profileModal = document.getElementById('profileModal');
@@ -917,7 +935,6 @@ function setupEventListeners() {
             renderApplications();
             renderAdminMembers();
             populateElectionsForm();
-            loadSymbolsAdmin();
         } else {
             openLoginModal();
         }
@@ -954,7 +971,6 @@ function setupEventListeners() {
             renderApplications();
             renderAdminMembers();
             populateElectionsForm();
-            loadSymbolsAdmin();
         } else {
             alert('Неверный логин или пароль!');
         }
@@ -1170,10 +1186,10 @@ function setupEventListeners() {
             if (tabName === 'applications') renderApplications();
             if (tabName === 'members') renderAdminMembers();
             if (tabName === 'elections') populateElectionsForm();
-            if (tabName === 'symbols-admin') loadSymbolsAdmin();
         });
     });
 
+    // Set default active page
     const currentActive = document.querySelector('.nav-links a.active');
     if (!currentActive) {
         const homeLink = document.querySelector('.nav-links a[data-page="home"]');
@@ -1186,6 +1202,7 @@ function setupEventListeners() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
+    loadSettings();
     (async function() {
         try {
             await dbFirebase.seed();
@@ -1195,7 +1212,6 @@ document.addEventListener('DOMContentLoaded', function() {
             await renderApplications();
             await renderAdminMembers();
             await renderElections();
-            await renderSymbolsPage();
             const members = await dbFirebase.getMembers();
             document.getElementById('totalMembers').textContent = members.length;
             await applyBackground();
