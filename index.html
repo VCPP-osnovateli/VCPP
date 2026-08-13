@@ -236,12 +236,9 @@
                     </div>
 
                     <div>
-                        <!-- Блок "Итоги выборов" теперь динамический -->
                         <div id="electionsBlock">
                             <!-- Рендерится из Firebase -->
                         </div>
-
-                        <!-- Блок "Сила и гордость нашей страны!" тоже динамический, но пока оставим как часть elections -->
                     </div>
                 </div>
             </section>
@@ -436,9 +433,7 @@
 
                     <hr style="margin: 20px 0; border: 0; border-top: 2px solid var(--light-gray);" />
                     <h4 style="font-size:16px; font-weight:700; color:var(--dark-blue); margin-bottom:12px;">Партии и проценты</h4>
-                    <div id="partiesContainer">
-                        <!-- Динамически добавляются поля -->
-                    </div>
+                    <div id="partiesContainer"></div>
                     <button type="button" class="btn btn-success" id="addPartyBtn" style="margin-bottom:12px;">➕ Добавить партию</button>
                     <br />
                     <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить изменения</button>
@@ -525,6 +520,49 @@
             <!-- Содержимое личного кабинета -->
             <div id="profileContent" style="display:none;">
                 <div id="profileInfo"></div>
+                <!-- Кнопка для переключения в режим редактирования -->
+                <button class="btn btn-edit" id="editProfileToggleBtn" style="margin-top:12px;">✏️ Редактировать профиль</button>
+                <!-- Форма редактирования (скрыта по умолчанию) -->
+                <div id="profileEditForm" style="display:none; margin-top:16px;">
+                    <h4 style="margin-bottom:8px;">Редактирование профиля</h4>
+                    <form id="editProfileForm">
+                        <div class="form-group">
+                            <label>Игровое ФИО</label>
+                            <input type="text" id="editProfileFullName" />
+                        </div>
+                        <div class="form-group">
+                            <label>Игровой возраст (IC)</label>
+                            <input type="number" id="editProfileIcAge" />
+                        </div>
+                        <div class="form-group">
+                            <label>Реальный возраст (OOC)</label>
+                            <input type="number" id="editProfileOocAge" />
+                        </div>
+                        <div class="form-group">
+                            <label>Discord</label>
+                            <input type="text" id="editProfileDiscord" />
+                        </div>
+                        <div class="form-group">
+                            <label>Мотивация</label>
+                            <textarea id="editProfileMotivation" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Поддержка</label>
+                            <textarea id="editProfileSupport" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">💾 Сохранить изменения</button>
+                        <button type="button" class="btn btn-warning" id="cancelEditProfileBtn" style="margin-left:8px;">Отмена</button>
+                    </form>
+                </div>
+
+                <!-- Дополнительные действия в зависимости от статуса -->
+                <div id="profileActions" style="margin-top:16px;">
+                    <!-- Кнопка отзыва заявки (только для pending) -->
+                    <button class="btn btn-danger" id="withdrawApplicationBtn" style="display:none;">🗑️ Отозвать заявку</button>
+                    <!-- Кнопка повторной подачи (только для rejected) -->
+                    <button class="btn btn-warning" id="resubmitApplicationBtn" style="display:none;">🔄 Подать заново</button>
+                </div>
+
                 <button class="btn btn-danger" id="profileLogoutBtn" style="margin-top:16px;">Выйти из кабинета</button>
             </div>
         </div>
