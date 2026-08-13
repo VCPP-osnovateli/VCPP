@@ -174,15 +174,22 @@ async function renderNews() {
         const pressList = document.getElementById('pressArticlesList');
         const adminList = document.getElementById('adminNewsList');
 
+        // Проверяем настройку "Показывать превью новостей"
+        const showPreview = localStorage.getItem('showNewsPreview') !== 'false';
+
         if (homeGrid) {
-            homeGrid.innerHTML = news.map(item => `
-                <div class="news-card">
-                    <div class="date">${item.date}</div>
-                    <h4>${item.title}</h4>
-                    <p>${item.text}</p>
-                    <a href="#" class="read-more" data-page="press">Читать →</a>
-                </div>
-            `).join('');
+            if (showPreview) {
+                homeGrid.innerHTML = news.map(item => `
+                    <div class="news-card">
+                        <div class="date">${item.date}</div>
+                        <h4>${item.title}</h4>
+                        <p>${item.text}</p>
+                        <a href="#" class="read-more" data-page="press">Читать →</a>
+                    </div>
+                `).join('');
+            } else {
+                homeGrid.innerHTML = '<p style="text-align:center; color:#6a7a8e; padding:20px;">Превью новостей скрыто в настройках.</p>';
+            }
         }
 
         if (pressList) {
@@ -355,6 +362,40 @@ async function handleApplication(userId, action) {
         console.error('handleApplication error:', e);
     }
 }
+
+// Удаление рассмотренных заявок
+document.getElementById('deleteApprovedBtn').addEventListener('click', async function() {
+    if (!confirm('Удалить все одобренные заявки?')) return;
+    const users = await dbFirebase.getUsers();
+    const approved = users.filter(u => u.status === 'approved');
+    for (const user of approved) {
+        await dbFirebase.deleteUser(user.id);
+    }
+    await renderApplications();
+    alert(`Удалено ${approved.length} одобренных заявок.`);
+});
+
+document.getElementById('deleteRejectedBtn').addEventListener('click', async function() {
+    if (!confirm('Удалить все отклонённые заявки?')) return;
+    const users = await dbFirebase.getUsers();
+    const rejected = users.filter(u => u.status === 'rejected');
+    for (const user of rejected) {
+        await dbFirebase.deleteUser(user.id);
+    }
+    await renderApplications();
+    alert(`Удалено ${rejected.length} отклонённых заявок.`);
+});
+
+document.getElementById('deleteAllReviewedBtn').addEventListener('click', async function() {
+    if (!confirm('Удалить все рассмотренные заявки (одобренные и отклонённые)?')) return;
+    const users = await dbFirebase.getUsers();
+    const reviewed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
+    for (const user of reviewed) {
+        await dbFirebase.deleteUser(user.id);
+    }
+    await renderApplications();
+    alert(`Удалено ${reviewed.length} рассмотренных заявок.`);
+});
 
 async function renderAdminMembers() {
     try {
@@ -611,7 +652,6 @@ function showProfileContent(user) {
     profileLoginForm.style.display = 'none';
     profileContent.style.display = 'block';
 
-    // Заполняем информацию
     const statusText = user.status === 'pending' ? 'На рассмотрении' : user.status === 'approved' ? 'Одобрена' : 'Отклонена';
     profileInfo.innerHTML = `
         <h3 style="margin-bottom:8px;">${user.fullName}</h3>
@@ -625,11 +665,9 @@ function showProfileContent(user) {
         ${user.status === 'rejected' ? '<p style="color:#d32f2f; font-weight:600;">✗ К сожалению, ваша заявка отклонена.</p>' : ''}
     `;
 
-    // Показываем/скрываем кнопки действий в зависимости от статуса
     withdrawBtn.style.display = (user.status === 'pending') ? 'inline-block' : 'none';
     resubmitBtn.style.display = (user.status === 'rejected') ? 'inline-block' : 'none';
 
-    // Заполняем форму редактирования текущими данными
     document.getElementById('editProfileFullName').value = user.fullName || '';
     document.getElementById('editProfileIcAge').value = user.icAge || '';
     document.getElementById('editProfileOocAge').value = user.oocAge || '';
@@ -637,13 +675,11 @@ function showProfileContent(user) {
     document.getElementById('editProfileMotivation').value = user.motivation || '';
     document.getElementById('editProfileSupport').value = user.support || '';
 
-    // Скрываем форму редактирования
     profileEditForm.style.display = 'none';
     isEditingProfile = false;
     editProfileToggleBtn.textContent = '✏️ Редактировать профиль';
 }
 
-// Обработчик кнопки "Редактировать профиль"
 document.getElementById('editProfileToggleBtn').addEventListener('click', function() {
     const form = document.getElementById('profileEditForm');
     if (isEditingProfile) {
@@ -657,7 +693,6 @@ document.getElementById('editProfileToggleBtn').addEventListener('click', functi
     }
 });
 
-// Отмена редактирования
 document.getElementById('cancelEditProfileBtn').addEventListener('click', function() {
     const form = document.getElementById('profileEditForm');
     form.style.display = 'none';
@@ -665,7 +700,6 @@ document.getElementById('cancelEditProfileBtn').addEventListener('click', functi
     document.getElementById('editProfileToggleBtn').textContent = '✏️ Редактировать профиль';
 });
 
-// Сохранение изменений профиля
 document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     if (!currentUser) return;
@@ -693,11 +727,8 @@ document.getElementById('editProfileForm').addEventListener('submit', async func
 
     try {
         await dbFirebase.updateUser(currentUser.id, updatedData);
-        // Обновляем текущего пользователя
         currentUser = { ...currentUser, ...updatedData };
-        // Обновляем отображение
         showProfileContent(currentUser);
-        // Также обновляем список заявок в админке, если она открыта
         if (isAdminLoggedIn) {
             await renderApplications();
         }
@@ -707,14 +738,12 @@ document.getElementById('editProfileForm').addEventListener('submit', async func
     }
 });
 
-// Отзыв заявки
 document.getElementById('withdrawApplicationBtn').addEventListener('click', async function() {
     if (!currentUser || currentUser.status !== 'pending') return;
     if (!confirm('Вы уверены, что хотите отозвать свою заявку?')) return;
 
     try {
         await dbFirebase.deleteUser(currentUser.id);
-        // Выходим из кабинета
         currentUser = null;
         saveUserState(null);
         document.getElementById('profileLoginForm').style.display = 'block';
@@ -729,15 +758,98 @@ document.getElementById('withdrawApplicationBtn').addEventListener('click', asyn
     }
 });
 
-// Повторная подача заявки (перенаправляет на страницу вступления)
 document.getElementById('resubmitApplicationBtn').addEventListener('click', function() {
     if (!currentUser || currentUser.status !== 'rejected') return;
     closeProfileModal();
-    // Переключаемся на страницу вступления
     showPage('join');
-    // Очищаем форму, чтобы пользователь мог заполнить её заново
     document.getElementById('joinForm').reset();
     alert('Заполните анкету заново для повторной подачи заявки.');
+});
+
+// ============================================================
+// SETTINGS FUNCTIONS
+// ============================================================
+function loadSettings() {
+    // Тема
+    const theme = localStorage.getItem('theme') || 'light';
+    document.getElementById('themeSelect').value = theme;
+    applyTheme(theme);
+
+    // Размер шрифта
+    const fontSize = localStorage.getItem('fontSize') || 'medium';
+    document.getElementById('fontSizeSelect').value = fontSize;
+    applyFontSize(fontSize);
+
+    // Превью новостей
+    const showPreview = localStorage.getItem('showNewsPreview') !== 'false';
+    document.getElementById('showNewsPreview').checked = showPreview;
+
+    // Анимации
+    const enableAnimations = localStorage.getItem('enableAnimations') !== 'false';
+    document.getElementById('enableAnimations').checked = enableAnimations;
+    applyAnimations(enableAnimations);
+}
+
+function applyTheme(theme) {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+        root.style.setProperty('--dark-blue', '#1a1a2e');
+        root.style.setProperty('--white', '#2d2d44');
+        root.style.setProperty('--light-gray', '#3d3d5c');
+        root.style.setProperty('--text-dark', '#f0f0f0');
+        root.style.setProperty('--shadow', '0 8px 32px rgba(0,0,0,0.5)');
+        document.body.style.color = '#f0f0f0';
+    } else {
+        root.style.setProperty('--dark-blue', '#0E2A47');
+        root.style.setProperty('--white', '#FFFFFF');
+        root.style.setProperty('--light-gray', '#D9DEE5');
+        root.style.setProperty('--text-dark', '#1A1A2E');
+        root.style.setProperty('--shadow', '0 8px 32px rgba(14, 42, 71, 0.15)');
+        document.body.style.color = '#1A1A2E';
+    }
+}
+
+function applyFontSize(size) {
+    const sizes = {
+        small: '14px',
+        medium: '16px',
+        large: '18px',
+        xlarge: '20px'
+    };
+    document.body.style.fontSize = sizes[size] || '16px';
+}
+
+function applyAnimations(enabled) {
+    const style = document.getElementById('animationStyle');
+    if (enabled) {
+        if (style) style.remove();
+        document.querySelectorAll('.page-section').forEach(el => {
+            el.style.animation = 'fadeUp 0.4s ease';
+        });
+    } else {
+        document.querySelectorAll('.page-section').forEach(el => {
+            el.style.animation = 'none';
+        });
+    }
+}
+
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const theme = document.getElementById('themeSelect').value;
+    const fontSize = document.getElementById('fontSizeSelect').value;
+    const showPreview = document.getElementById('showNewsPreview').checked;
+    const enableAnimations = document.getElementById('enableAnimations').checked;
+
+    localStorage.setItem('theme', theme);
+    localStorage.setItem('fontSize', fontSize);
+    localStorage.setItem('showNewsPreview', showPreview);
+    localStorage.setItem('enableAnimations', enableAnimations);
+
+    applyTheme(theme);
+    applyFontSize(fontSize);
+    applyAnimations(enableAnimations);
+    renderNews(); // обновляем превью новостей
+    alert('✅ Настройки сохранены!');
 });
 
 // ============================================================
@@ -1090,6 +1202,7 @@ function setupEventListeners() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
+    loadSettings();
     (async function() {
         try {
             await dbFirebase.seed();
