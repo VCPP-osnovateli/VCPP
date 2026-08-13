@@ -17,8 +17,8 @@
             <div class="header-top">
                 <div class="logo-block">
                     <div class="logo-text">
-                        <span class="party-name" id="headerPartyName">ВЦПП <span class="accent">«Новая Россия»</span></span>
-                        <span class="slogan" id="headerSlogan">Время строить Новую Россию!</span>
+                        <span class="party-name">ВЦПП <span class="accent">«Новая Россия»</span></span>
+                        <span class="slogan">Время строить Новую Россию!</span>
                     </div>
                 </div>
                 <div class="header-actions">
@@ -158,49 +158,8 @@
                     ⚡ Данный сайт не является реальным политическим ресурсом и создан исключительно для игрового сервера Рублевка RMRP.
                 </div>
 
-                <div class="symbols-grid">
-                    <div class="symbol-card">
-                        <div class="symbol-image">
-                            <div class="text-logo">
-                                <span class="line line1">БЕЛОРУССИЙСКАЯ</span>
-                                <span class="line line2">ЦЕНТР</span>
-                                <span class="line line3">ПОЛИТИЧЕСКАЯ</span>
-                                <span class="line line4">НОВЫЙ</span>
-                                <span class="line line5">НАРОДНЫЙ</span>
-                                <span class="line line6">ПРАКТИК</span>
-                                <span class="line line7">НОВАЯ</span>
-                                <span class="line line8">РОССИЯ</span>
-                            </div>
-                        </div>
-                        <h3>Герб ВЦПП</h3>
-                        <p>Официальный герб партии.</p>
-                    </div>
-                    <div class="symbol-card">
-                        <div class="symbol-image">
-                            <svg viewBox="0 0 200 200" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="100" cy="100" r="90" fill="#D9DEE5" stroke="#0E2A47" stroke-width="6"/>
-                                <circle cx="100" cy="100" r="80" fill="none" stroke="#0E2A47" stroke-width="2"/>
-                                <text x="100" y="90" font-family="Inter, sans-serif" font-size="16" fill="#0E2A47" text-anchor="middle" font-weight="700">ШТАМП</text>
-                                <text x="100" y="115" font-family="Inter, sans-serif" font-size="12" fill="#0E2A47" text-anchor="middle">ВЦПП</text>
-                                <text x="100" y="140" font-family="Inter, sans-serif" font-size="10" fill="#0E2A47" text-anchor="middle">ПАРТИЯ</text>
-                            </svg>
-                        </div>
-                        <h3>Штамп</h3>
-                        <p>Официальный штамп организации.</p>
-                    </div>
-                    <div class="symbol-card">
-                        <div class="symbol-image">
-                            <svg viewBox="0 0 200 200" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="100" cy="100" r="90" fill="#FFFFFF" stroke="#D72638" stroke-width="6"/>
-                                <circle cx="100" cy="100" r="80" fill="none" stroke="#D72638" stroke-width="2" stroke-dasharray="8,4"/>
-                                <text x="100" y="90" font-family="Inter, sans-serif" font-size="16" fill="#D72638" text-anchor="middle" font-weight="700">ПЕЧАТЬ</text>
-                                <text x="100" y="115" font-family="Inter, sans-serif" font-size="12" fill="#0E2A47" text-anchor="middle">ВЦПП</text>
-                                <text x="100" y="140" font-family="Inter, sans-serif" font-size="10" fill="#0E2A47" text-anchor="middle">НОВАЯ РОССИЯ</text>
-                            </svg>
-                        </div>
-                        <h3>Печать</h3>
-                        <p>Официальная печать партии.</p>
-                    </div>
+                <div class="symbols-grid" id="symbolsContainer">
+                    <!-- Динамически заполняется из Firebase -->
                 </div>
             </section>
 
@@ -347,6 +306,7 @@
                 <button data-tab="applications">Заявки</button>
                 <button data-tab="members">Управление составом</button>
                 <button data-tab="elections">Выборы</button>
+                <button data-tab="symbols-admin">Символика</button>
                 <button data-tab="settings">Настройки</button>
             </div>
 
@@ -377,8 +337,7 @@
             <div class="admin-panel-section" id="adminTabApplications">
                 <p style="margin-bottom:16px; color:#3a4a5e;">Просмотр и обработка заявок на вступление.</p>
                 <div id="applicationsList"></div>
-                <!-- Кнопка удаления всех рассмотренных заявок -->
-                <button class="btn btn-danger" id="clearReviewedAppsBtn" style="margin-top:12px;">🗑️ Удалить все рассмотренные заявки</button>
+                <button class="btn btn-danger" id="clearProcessedBtn" style="margin-top:12px;">🗑️ Удалить все рассмотренные заявки</button>
             </div>
 
             <!-- Вкладка: Управление составом -->
@@ -442,35 +401,33 @@
                 </form>
             </div>
 
-            <!-- Вкладка: Настройки (расширена) -->
-            <div class="admin-panel-section" id="adminTabSettings">
-                <p style="margin-bottom:16px; color:#3a4a5e;">Настройка внешнего вида и функционала сайта.</p>
-                <form id="settingsForm">
+            <!-- Вкладка: Символика (админ) -->
+            <div class="admin-panel-section" id="adminTabSymbolsAdmin">
+                <p style="margin-bottom:16px; color:#3a4a5e;">Загрузка изображений для герба, штампа и печати.</p>
+                <form id="symbolsAdminForm">
                     <div class="form-group">
-                        <label>Название партии (в шапке)</label>
-                        <input type="text" id="settingsPartyName" placeholder="ВЦПП «Новая Россия»" />
+                        <label>Герб</label>
+                        <input type="file" id="symbolGerbFile" accept="image/*" />
+                        <div id="symbolGerbPreview" style="margin-top:8px;"></div>
                     </div>
                     <div class="form-group">
-                        <label>Слоган (в шапке)</label>
-                        <input type="text" id="settingsSlogan" placeholder="Время строить Новую Россию!" />
-                    </div>
-                    <hr style="margin: 16px 0; border: 0; border-top: 2px solid var(--light-gray);" />
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="settingsShowElections" /> Показывать блок «Итоги выборов» на странице «Пресс-служба»
-                        </label>
+                        <label>Штамп</label>
+                        <input type="file" id="symbolStampFile" accept="image/*" />
+                        <div id="symbolStampPreview" style="margin-top:8px;"></div>
                     </div>
                     <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="settingsShowFooterBlock" /> Показывать дополнительный блок под выборами
-                        </label>
+                        <label>Печать</label>
+                        <input type="file" id="symbolSealFile" accept="image/*" />
+                        <div id="symbolSealPreview" style="margin-top:8px;"></div>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить настройки</button>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить символику</button>
+                    <button type="button" class="btn btn-danger" id="resetSymbolsBtn" style="margin-top:8px;">🗑️ Сбросить символику</button>
                 </form>
+            </div>
 
-                <hr style="margin: 24px 0; border: 0; border-top: 2px solid var(--light-gray);" />
-
-                <p style="margin-bottom:16px; color:#3a4a5e;">Фоновое изображение:</p>
+            <!-- Вкладка: Настройки -->
+            <div class="admin-panel-section" id="adminTabSettings">
+                <p style="margin-bottom:16px; color:#3a4a5e;">Настройка внешнего вида сайта.</p>
                 <form id="backgroundForm">
                     <div class="form-group">
                         <label>Фоновое изображение (загрузить с ПК)</label>
@@ -479,6 +436,8 @@
                     <button type="submit" class="btn btn-primary" style="width:100%;">📷 Применить фон</button>
                     <button type="button" class="btn btn-danger" id="resetBgBtn" style="margin-top:8px;">🗑️ Сбросить фон</button>
                 </form>
+                <hr style="margin: 24px 0; border: 0; border-top: 2px solid var(--light-gray);" />
+                <p><small>Изображение будет применено ко всей странице. Рекомендуемый размер: 1920x1080.</small></p>
             </div>
 
             <div style="margin-top:20px; text-align:right;">
@@ -594,8 +553,8 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <div class="party-name" id="footerPartyName">ВЦПП <span class="red">«Новая Россия»</span></div>
-                    <div class="slogan" id="footerSlogan">Время строить Новую Россию!</div>
+                    <div class="party-name">ВЦПП <span class="red">«Новая Россия»</span></div>
+                    <div class="slogan">Время строить Новую Россию!</div>
                     <p>Всероссийская центристская политическая партия «Новая Россия». Мы работаем для людей и ради будущего нашей великой родины.</p>
                 </div>
                 <div class="footer-col">
