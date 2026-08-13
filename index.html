@@ -28,7 +28,8 @@
             </div>
 
             <nav class="nav">
-                <div class="nav-links">
+                <div class="nav-links" id="mainNav">
+                    <!-- Ссылки будут динамически скрываться по настройкам -->
                     <a href="#" class="active" data-page="home">Главная</a>
                     <a href="#" data-page="about">О партии</a>
                     <a href="#" data-page="symbols">Символика</a>
@@ -194,10 +195,8 @@
                         </div>
                     </div>
 
-                    <div>
-                        <div id="electionsBlock">
-                            <!-- Рендерится из Firebase -->
-                        </div>
+                    <div id="electionsBlockContainer">
+                        <!-- Блок выборов будет рендериться сюда, если включён -->
                     </div>
                 </div>
             </section>
@@ -453,17 +452,32 @@
 
             <!-- Вкладка: Настройки -->
             <div class="admin-panel-section" id="adminTabSettings">
-                <p style="margin-bottom:16px; color:#3a4a5e;">Настройка внешнего вида сайта.</p>
-                <form id="backgroundForm">
-                    <div class="form-group">
-                        <label>Фоновое изображение (загрузить с ПК)</label>
-                        <input type="file" id="bgImage" accept="image/*" />
+                <p style="margin-bottom:16px; color:#3a4a5e;">Настройка видимости разделов и внешнего вида сайта.</p>
+                <form id="settingsForm">
+                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
+                        <h4 style="margin-bottom:8px;">Видимость разделов</h4>
+                        <div class="form-group" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <label><input type="checkbox" id="showElections" /> Выборы</label>
+                            <label><input type="checkbox" id="showComposition" /> Состав</label>
+                            <label><input type="checkbox" id="showPress" /> Пресс-служба</label>
+                            <label><input type="checkbox" id="showSymbols" /> Символика</label>
+                            <label><input type="checkbox" id="showAbout" /> О партии</label>
+                            <label><input type="checkbox" id="showJoin" /> Вступление</label>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;">📷 Применить фон</button>
-                    <button type="button" class="btn btn-danger" id="resetBgBtn" style="margin-top:8px;">🗑️ Сбросить фон</button>
+
+                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
+                        <h4 style="margin-bottom:8px;">Фоновое изображение</h4>
+                        <div class="form-group">
+                            <label>Загрузить с ПК</label>
+                            <input type="file" id="bgImage" accept="image/*" />
+                        </div>
+                        <button type="button" class="btn btn-primary" id="applyBgBtn">📷 Применить фон</button>
+                        <button type="button" class="btn btn-danger" id="resetBgBtn" style="margin-top:8px;">🗑️ Сбросить фон</button>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить настройки</button>
                 </form>
-                <hr style="margin: 24px 0; border: 0; border-top: 2px solid var(--light-gray);" />
-                <p><small>Изображение будет применено ко всей странице. Рекомендуемый размер: 1920x1080.</small></p>
             </div>
 
             <div style="margin-top:20px; text-align:right;">
