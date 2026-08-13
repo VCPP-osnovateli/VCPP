@@ -37,9 +37,6 @@ const dbFirebase = {
     async deleteNews(id) {
         await database.ref(`news/${id}`).remove();
     },
-    async updateNews(id, newData) {
-        await database.ref(`news/${id}`).update(newData);
-    },
 
     async getUsers() {
         const snapshot = await database.ref('users').once('value');
@@ -59,6 +56,15 @@ const dbFirebase = {
     },
     async updateUser(id, newData) {
         await database.ref(`users/${id}`).update(newData);
+    },
+    // Удаление всех пользователей с определённым статусом
+    async deleteUsersByStatus(status) {
+        const users = await this.getUsers();
+        const toDelete = users.filter(u => u.status === status);
+        for (const user of toDelete) {
+            await this.deleteUser(user.id);
+        }
+        return toDelete.length;
     },
 
     async getMembers() {
@@ -131,9 +137,19 @@ const dbFirebase = {
             }
         }
 
-        const bg = await this.getSetting('background');
-        if (bg === null) {
-            await this.setSetting('background', '');
+        // Настройки
+        const settingsMap = {
+            'background': '',
+            'partyName': 'ВЦПП «Новая Россия»',
+            'slogan': 'Время строить Новую Россию!',
+            'showElections': true,
+            'showFooterBlock': true
+        };
+        for (const [key, defValue] of Object.entries(settingsMap)) {
+            const val = await this.getSetting(key);
+            if (val === null) {
+                await this.setSetting(key, defValue);
+            }
         }
 
         const elections = await this.getElections();
@@ -174,22 +190,15 @@ async function renderNews() {
         const pressList = document.getElementById('pressArticlesList');
         const adminList = document.getElementById('adminNewsList');
 
-        // Проверяем настройку "Показывать превью новостей"
-        const showPreview = localStorage.getItem('showNewsPreview') !== 'false';
-
         if (homeGrid) {
-            if (showPreview) {
-                homeGrid.innerHTML = news.map(item => `
-                    <div class="news-card">
-                        <div class="date">${item.date}</div>
-                        <h4>${item.title}</h4>
-                        <p>${item.text}</p>
-                        <a href="#" class="read-more" data-page="press">Читать →</a>
-                    </div>
-                `).join('');
-            } else {
-                homeGrid.innerHTML = '<p style="text-align:center; color:#6a7a8e; padding:20px;">Превью новостей скрыто в настройках.</p>';
-            }
+            homeGrid.innerHTML = news.map(item => `
+                <div class="news-card">
+                    <div class="date">${item.date}</div>
+                    <h4>${item.title}</h4>
+                    <p>${item.text}</p>
+                    <a href="#" class="read-more" data-page="press">Читать →</a>
+                </div>
+            `).join('');
         }
 
         if (pressList) {
@@ -209,12 +218,14 @@ async function renderNews() {
                         <div class="title">${item.title}</div>
                         <div class="date">${item.date}</div>
                     </div>
-                    <button class="btn btn-danger" data-news-id="${item.id}">Удалить</button>
+                    <button class="btn btn-danger btn-delete-news" data-news-id="${item.id}">Удалить</button>
                 </div>
             `).join('');
 
-            adminList.querySelectorAll('[data-news-id]').forEach(btn => {
-                btn.addEventListener('click', async function() {
+            // Обработчики удаления новостей — используем делегирование
+            adminList.querySelectorAll('.btn-delete-news').forEach(btn => {
+                btn.addEventListener('click', async function(e) {
+                    e.stopPropagation();
                     const id = this.getAttribute('data-news-id');
                     await dbFirebase.deleteNews(id);
                     await renderNews();
@@ -322,17 +333,43 @@ async function renderApplications() {
                 </div>
                 ${user.status === 'pending' ? `
                 <div class="app-actions">
-                    <button class="btn btn-success" data-user-id="${user.id}" data-action="approve">Одобрить</button>
-                    <button class="btn btn-danger" data-user-id="${user.id}" data-action="reject">Отклонить</button>
-                </div>` : ''}
+                    <button class="btn btn-success btn-approve-app" data-user-id="${user.id}">Одобрить</button>
+                    <button class="btn btn-danger btn-reject-app" data-user-id="${user.id}">Отклонить</button>
+                </div>` : `
+                <div class="app-actions">
+                    <button class="btn btn-danger btn-delete-app" data-user-id="${user.id}">🗑️ Удалить</button>
+                </div>`}
             </div>
         `).join('');
 
-        list.querySelectorAll('[data-action]').forEach(btn => {
-            btn.addEventListener('click', async function() {
+        // Обработчики для заявок — используем делегирование через классы
+        list.querySelectorAll('.btn-approve-app').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.stopPropagation();
                 const userId = this.getAttribute('data-user-id');
-                const action = this.getAttribute('data-action');
-                await handleApplication(userId, action);
+                await handleApplication(userId, 'approve');
+            });
+        });
+        list.querySelectorAll('.btn-reject-app').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.stopPropagation();
+                const userId = this.getAttribute('data-user-id');
+                await handleApplication(userId, 'reject');
+            });
+        });
+        list.querySelectorAll('.btn-delete-app').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.stopPropagation();
+                const userId = this.getAttribute('data-user-id');
+                if (confirm('Удалить эту заявку?')) {
+                    await dbFirebase.deleteUser(userId);
+                    await renderApplications();
+                    // Если удалённый пользователь был текущим — выходим из кабинета
+                    if (currentUser && currentUser.id === userId) {
+                        currentUser = null;
+                        saveUserState(null);
+                    }
+                }
             });
         });
     } catch (e) {
@@ -363,40 +400,6 @@ async function handleApplication(userId, action) {
     }
 }
 
-// Удаление рассмотренных заявок
-document.getElementById('deleteApprovedBtn').addEventListener('click', async function() {
-    if (!confirm('Удалить все одобренные заявки?')) return;
-    const users = await dbFirebase.getUsers();
-    const approved = users.filter(u => u.status === 'approved');
-    for (const user of approved) {
-        await dbFirebase.deleteUser(user.id);
-    }
-    await renderApplications();
-    alert(`Удалено ${approved.length} одобренных заявок.`);
-});
-
-document.getElementById('deleteRejectedBtn').addEventListener('click', async function() {
-    if (!confirm('Удалить все отклонённые заявки?')) return;
-    const users = await dbFirebase.getUsers();
-    const rejected = users.filter(u => u.status === 'rejected');
-    for (const user of rejected) {
-        await dbFirebase.deleteUser(user.id);
-    }
-    await renderApplications();
-    alert(`Удалено ${rejected.length} отклонённых заявок.`);
-});
-
-document.getElementById('deleteAllReviewedBtn').addEventListener('click', async function() {
-    if (!confirm('Удалить все рассмотренные заявки (одобренные и отклонённые)?')) return;
-    const users = await dbFirebase.getUsers();
-    const reviewed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
-    for (const user of reviewed) {
-        await dbFirebase.deleteUser(user.id);
-    }
-    await renderApplications();
-    alert(`Удалено ${reviewed.length} рассмотренных заявок.`);
-});
-
 async function renderAdminMembers() {
     try {
         const members = await dbFirebase.getMembers();
@@ -413,14 +416,15 @@ async function renderAdminMembers() {
                     <div class="date">${m.position || 'Без должности'} • ${m.role === 'leader' ? 'Руководство' : m.role === 'deputy' ? 'Депутат' : 'Член партии'}</div>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-edit btn-sm" data-member-id="${m.id}">✏️ Редактировать</button>
-                    <button class="btn btn-danger btn-sm" data-member-id="${m.id}">Удалить</button>
+                    <button class="btn btn-edit btn-sm btn-edit-member" data-member-id="${m.id}">✏️ Редактировать</button>
+                    <button class="btn btn-danger btn-sm btn-delete-member" data-member-id="${m.id}">Удалить</button>
                 </div>
             </div>
         `).join('');
 
-        list.querySelectorAll('.btn-danger[data-member-id]').forEach(btn => {
-            btn.addEventListener('click', async function() {
+        list.querySelectorAll('.btn-delete-member').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.stopPropagation();
                 const id = this.getAttribute('data-member-id');
                 if (confirm('Удалить этого члена из состава?')) {
                     await dbFirebase.deleteMember(id);
@@ -430,8 +434,9 @@ async function renderAdminMembers() {
             });
         });
 
-        list.querySelectorAll('.btn-edit[data-member-id]').forEach(btn => {
-            btn.addEventListener('click', function() {
+        list.querySelectorAll('.btn-edit-member').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const id = this.getAttribute('data-member-id');
                 openEditMemberModal(id);
             });
@@ -522,6 +527,12 @@ async function renderElections() {
     const container = document.getElementById('electionsBlock');
     if (!container) return;
 
+    const showElections = await dbFirebase.getSetting('showElections');
+    if (showElections === false) {
+        container.innerHTML = '';
+        return;
+    }
+
     if (!elections || !elections.parties || elections.parties.length === 0) {
         container.innerHTML = '<p>Данные о выборах временно отсутствуют.</p>';
         return;
@@ -546,7 +557,8 @@ async function renderElections() {
         </div>
     `;
 
-    if (elections.footer || elections.footerDate) {
+    const showFooterBlock = await dbFirebase.getSetting('showFooterBlock');
+    if (showFooterBlock !== false && (elections.footer || elections.footerDate)) {
         html += `
             <div style="background:var(--white); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow); margin-top:20px; border-left:4px solid var(--red);">
                 <p style="font-weight:600; color:var(--dark-blue);">🇷🇺 ${elections.footer || ''}</p>
@@ -602,6 +614,7 @@ function addPartyField(index, name = '', percent = '') {
     });
 }
 
+// Обработчик добавления партии (событие делегировано на документ)
 document.addEventListener('click', function(e) {
     if (e.target && e.target.id === 'addPartyBtn') {
         addPartyField(document.querySelectorAll('.party-field').length);
@@ -635,6 +648,58 @@ document.getElementById('electionsForm').addEventListener('submit', async functi
     await dbFirebase.setElections(electionsData);
     await renderElections();
     alert('✅ Данные о выборах обновлены!');
+});
+
+// ============================================================
+// SETTINGS
+// ============================================================
+async function loadSettings() {
+    const partyName = await dbFirebase.getSetting('partyName');
+    const slogan = await dbFirebase.getSetting('slogan');
+    const showElections = await dbFirebase.getSetting('showElections');
+    const showFooterBlock = await dbFirebase.getSetting('showFooterBlock');
+
+    document.getElementById('settingsPartyName').value = partyName || '';
+    document.getElementById('settingsSlogan').value = slogan || '';
+    document.getElementById('settingsShowElections').checked = showElections !== false;
+    document.getElementById('settingsShowFooterBlock').checked = showFooterBlock !== false;
+
+    // Применить к шапке и футеру
+    updateHeaderFooter(partyName, slogan);
+}
+
+function updateHeaderFooter(partyName, slogan) {
+    const headerName = document.getElementById('headerPartyName');
+    const headerSlogan = document.getElementById('headerSlogan');
+    const footerName = document.getElementById('footerPartyName');
+    const footerSlogan = document.getElementById('footerSlogan');
+
+    if (headerName) {
+        // Сохраняем красный акцент
+        headerName.innerHTML = partyName ? partyName.replace(/«Новая Россия»/, '<span class="accent">«Новая Россия»</span>') : 'ВЦПП <span class="accent">«Новая Россия»</span>';
+    }
+    if (headerSlogan) headerSlogan.textContent = slogan || 'Время строить Новую Россию!';
+    if (footerName) {
+        footerName.innerHTML = partyName ? partyName.replace(/«Новая Россия»/, '<span class="red">«Новая Россия»</span>') : 'ВЦПП <span class="red">«Новая Россия»</span>';
+    }
+    if (footerSlogan) footerSlogan.textContent = slogan || 'Время строить Новую Россию!';
+}
+
+document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const partyName = document.getElementById('settingsPartyName').value.trim();
+    const slogan = document.getElementById('settingsSlogan').value.trim();
+    const showElections = document.getElementById('settingsShowElections').checked;
+    const showFooterBlock = document.getElementById('settingsShowFooterBlock').checked;
+
+    await dbFirebase.setSetting('partyName', partyName);
+    await dbFirebase.setSetting('slogan', slogan);
+    await dbFirebase.setSetting('showElections', showElections);
+    await dbFirebase.setSetting('showFooterBlock', showFooterBlock);
+
+    updateHeaderFooter(partyName, slogan);
+    await renderElections();
+    alert('✅ Настройки сохранены!');
 });
 
 // ============================================================
@@ -680,6 +745,7 @@ function showProfileContent(user) {
     editProfileToggleBtn.textContent = '✏️ Редактировать профиль';
 }
 
+// Обработчики для профиля — используем отдельные привязки
 document.getElementById('editProfileToggleBtn').addEventListener('click', function() {
     const form = document.getElementById('profileEditForm');
     if (isEditingProfile) {
@@ -716,22 +782,12 @@ document.getElementById('editProfileForm').addEventListener('submit', async func
         return;
     }
 
-    const updatedData = {
-        fullName,
-        icAge,
-        oocAge,
-        discord,
-        motivation,
-        support
-    };
-
+    const updatedData = { fullName, icAge, oocAge, discord, motivation, support };
     try {
         await dbFirebase.updateUser(currentUser.id, updatedData);
         currentUser = { ...currentUser, ...updatedData };
         showProfileContent(currentUser);
-        if (isAdminLoggedIn) {
-            await renderApplications();
-        }
+        if (isAdminLoggedIn) await renderApplications();
         alert('✅ Данные профиля обновлены!');
     } catch (error) {
         alert('Ошибка при обновлении профиля: ' + error.message);
@@ -748,9 +804,7 @@ document.getElementById('withdrawApplicationBtn').addEventListener('click', asyn
         saveUserState(null);
         document.getElementById('profileLoginForm').style.display = 'block';
         document.getElementById('profileContent').style.display = 'none';
-        if (isAdminLoggedIn) {
-            await renderApplications();
-        }
+        if (isAdminLoggedIn) await renderApplications();
         alert('Заявка отозвана.');
         closeProfileModal();
     } catch (error) {
@@ -764,92 +818,6 @@ document.getElementById('resubmitApplicationBtn').addEventListener('click', func
     showPage('join');
     document.getElementById('joinForm').reset();
     alert('Заполните анкету заново для повторной подачи заявки.');
-});
-
-// ============================================================
-// SETTINGS FUNCTIONS
-// ============================================================
-function loadSettings() {
-    // Тема
-    const theme = localStorage.getItem('theme') || 'light';
-    document.getElementById('themeSelect').value = theme;
-    applyTheme(theme);
-
-    // Размер шрифта
-    const fontSize = localStorage.getItem('fontSize') || 'medium';
-    document.getElementById('fontSizeSelect').value = fontSize;
-    applyFontSize(fontSize);
-
-    // Превью новостей
-    const showPreview = localStorage.getItem('showNewsPreview') !== 'false';
-    document.getElementById('showNewsPreview').checked = showPreview;
-
-    // Анимации
-    const enableAnimations = localStorage.getItem('enableAnimations') !== 'false';
-    document.getElementById('enableAnimations').checked = enableAnimations;
-    applyAnimations(enableAnimations);
-}
-
-function applyTheme(theme) {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-        root.style.setProperty('--dark-blue', '#1a1a2e');
-        root.style.setProperty('--white', '#2d2d44');
-        root.style.setProperty('--light-gray', '#3d3d5c');
-        root.style.setProperty('--text-dark', '#f0f0f0');
-        root.style.setProperty('--shadow', '0 8px 32px rgba(0,0,0,0.5)');
-        document.body.style.color = '#f0f0f0';
-    } else {
-        root.style.setProperty('--dark-blue', '#0E2A47');
-        root.style.setProperty('--white', '#FFFFFF');
-        root.style.setProperty('--light-gray', '#D9DEE5');
-        root.style.setProperty('--text-dark', '#1A1A2E');
-        root.style.setProperty('--shadow', '0 8px 32px rgba(14, 42, 71, 0.15)');
-        document.body.style.color = '#1A1A2E';
-    }
-}
-
-function applyFontSize(size) {
-    const sizes = {
-        small: '14px',
-        medium: '16px',
-        large: '18px',
-        xlarge: '20px'
-    };
-    document.body.style.fontSize = sizes[size] || '16px';
-}
-
-function applyAnimations(enabled) {
-    const style = document.getElementById('animationStyle');
-    if (enabled) {
-        if (style) style.remove();
-        document.querySelectorAll('.page-section').forEach(el => {
-            el.style.animation = 'fadeUp 0.4s ease';
-        });
-    } else {
-        document.querySelectorAll('.page-section').forEach(el => {
-            el.style.animation = 'none';
-        });
-    }
-}
-
-document.getElementById('settingsForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const theme = document.getElementById('themeSelect').value;
-    const fontSize = document.getElementById('fontSizeSelect').value;
-    const showPreview = document.getElementById('showNewsPreview').checked;
-    const enableAnimations = document.getElementById('enableAnimations').checked;
-
-    localStorage.setItem('theme', theme);
-    localStorage.setItem('fontSize', fontSize);
-    localStorage.setItem('showNewsPreview', showPreview);
-    localStorage.setItem('enableAnimations', enableAnimations);
-
-    applyTheme(theme);
-    applyFontSize(fontSize);
-    applyAnimations(enableAnimations);
-    renderNews(); // обновляем превью новостей
-    alert('✅ Настройки сохранены!');
 });
 
 // ============================================================
@@ -905,10 +873,24 @@ async function restoreState() {
 }
 
 // ============================================================
-// EVENT LISTENERS
+// CLEAR REVIEWED APPLICATIONS
+// ============================================================
+document.getElementById('clearReviewedAppsBtn').addEventListener('click', async function() {
+    if (!confirm('Удалить все одобренные и отклонённые заявки? Это действие необратимо.')) return;
+    try {
+        const count = await dbFirebase.deleteUsersByStatus('approved');
+        const count2 = await dbFirebase.deleteUsersByStatus('rejected');
+        await renderApplications();
+        alert(`✅ Удалено ${count + count2} заявок (одобренных и отклонённых).`);
+    } catch (e) {
+        alert('Ошибка при удалении: ' + e.message);
+    }
+});
+
+// ============================================================
+// EVENT LISTENERS (основные модалки и навигация)
 // ============================================================
 function setupEventListeners() {
-    // ----- MODALS -----
     const loginModal = document.getElementById('loginModal');
     const adminModal = document.getElementById('adminModal');
     const profileModal = document.getElementById('profileModal');
@@ -935,6 +917,7 @@ function setupEventListeners() {
             renderApplications();
             renderAdminMembers();
             populateElectionsForm();
+            loadSettings();
         } else {
             openLoginModal();
         }
@@ -971,6 +954,7 @@ function setupEventListeners() {
             renderApplications();
             renderAdminMembers();
             populateElectionsForm();
+            loadSettings();
         } else {
             alert('Неверный логин или пароль!');
         }
@@ -1007,7 +991,7 @@ function setupEventListeners() {
         closeProfileModal();
     });
 
-    // ----- ADMIN FORMS -----
+    // ADMIN FORMS
     const addNewsForm = document.getElementById('addNewsForm');
     const addMemberForm = document.getElementById('addMemberForm');
     const backgroundForm = document.getElementById('backgroundForm');
@@ -1093,7 +1077,7 @@ function setupEventListeners() {
         }
     });
 
-    // ----- NAVIGATION -----
+    // NAVIGATION
     const navLinks = document.querySelectorAll('.nav-links a');
     const pageSections = {
         home: document.getElementById('page-home'),
@@ -1138,7 +1122,7 @@ function setupEventListeners() {
         });
     });
 
-    // ----- JOIN FORM -----
+    // JOIN FORM
     document.getElementById('joinForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const fullName = document.getElementById('joinFullName').value.trim();
@@ -1156,17 +1140,7 @@ function setupEventListeners() {
         }
 
         try {
-            await dbFirebase.addUser({
-                fullName,
-                icAge,
-                oocAge,
-                passport,
-                passportLink,
-                motivation,
-                support,
-                discord,
-                status: 'pending'
-            });
+            await dbFirebase.addUser({ fullName, icAge, oocAge, passport, passportLink, motivation, support, discord, status: 'pending' });
             alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
             this.reset();
             if (isAdminLoggedIn) await renderApplications();
@@ -1175,7 +1149,7 @@ function setupEventListeners() {
         }
     });
 
-    // ----- ADMIN TABS -----
+    // ADMIN TABS
     document.querySelectorAll('.admin-tabs button').forEach(tab => {
         tab.addEventListener('click', function() {
             document.querySelectorAll('.admin-tabs button').forEach(t => t.classList.remove('active'));
@@ -1186,6 +1160,7 @@ function setupEventListeners() {
             if (tabName === 'applications') renderApplications();
             if (tabName === 'members') renderAdminMembers();
             if (tabName === 'elections') populateElectionsForm();
+            if (tabName === 'settings') loadSettings();
         });
     });
 
@@ -1202,7 +1177,6 @@ function setupEventListeners() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
-    loadSettings();
     (async function() {
         try {
             await dbFirebase.seed();
@@ -1215,6 +1189,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const members = await dbFirebase.getMembers();
             document.getElementById('totalMembers').textContent = members.length;
             await applyBackground();
+            // Загружаем настройки в шапку/футер
+            const partyName = await dbFirebase.getSetting('partyName');
+            const slogan = await dbFirebase.getSetting('slogan');
+            updateHeaderFooter(partyName, slogan);
         } catch (e) {
             console.error('Ошибка инициализации:', e);
         }
