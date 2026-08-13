@@ -79,7 +79,7 @@ const dbFirebase = {
         await database.ref(`members/${id}`).update(newData);
     },
 
-    // Настройки
+    // Настройки (символика, фон, видимость)
     async getSetting(key) {
         const snapshot = await database.ref(`settings/${key}`).once('value');
         return snapshot.val();
@@ -91,7 +91,7 @@ const dbFirebase = {
         await database.ref(`settings/${key}`).remove();
     },
 
-    // Символика (используем ключи symbol_*)
+    // Символика – прямое обращение к настройкам
     async getSymbol(symbolKey) {
         return this.getSetting(symbolKey);
     },
@@ -115,11 +115,9 @@ const dbFirebase = {
         await database.ref('elections').set(data);
     },
 
-    // Настройки видимости (сохраняем как объект в settings/visibility)
     async getVisibilitySettings() {
         const val = await this.getSetting('visibility');
         if (!val) {
-            // Значения по умолчанию – всё включено
             const defaults = {
                 showElections: true,
                 showComposition: true,
@@ -189,7 +187,6 @@ const dbFirebase = {
             await this.setElections(defaultElections);
         }
 
-        // Visibility settings – если нет, создаём
         await this.getVisibilitySettings();
     }
 };
@@ -690,7 +687,7 @@ async function renderSymbolsPage() {
 }
 
 // ============================================================
-// SYMBOLS ADMIN
+// SYMBOLS ADMIN (загрузка картинок)
 // ============================================================
 async function loadSymbolsAdmin() {
     const gerb = await dbFirebase.getSymbol('symbol_gerb');
@@ -804,7 +801,6 @@ document.getElementById('symbolsAdminForm').addEventListener('submit', async fun
 // ============================================================
 async function loadVisibilitySettings() {
     visibilitySettings = await dbFirebase.getVisibilitySettings();
-    // Обновляем чекбоксы в админке
     document.getElementById('showElections').checked = visibilitySettings.showElections !== false;
     document.getElementById('showComposition').checked = visibilitySettings.showComposition !== false;
     document.getElementById('showPress').checked = visibilitySettings.showPress !== false;
@@ -815,7 +811,6 @@ async function loadVisibilitySettings() {
 }
 
 function applyVisibility() {
-    // Навигация
     const navLinks = document.querySelectorAll('#mainNav a');
     const pageMap = {
         about: 'showAbout',
@@ -830,12 +825,8 @@ function applyVisibility() {
             link.style.display = visibilitySettings[pageMap[page]] !== false ? '' : 'none';
         }
     });
-
-    // Скрываем/показываем страницы при переключении (активная страница может стать скрытой)
-    // Но мы не будем автоматически переключать, просто обновим видимость при переходе.
 }
 
-// Сохранение настроек
 document.getElementById('settingsForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -851,22 +842,18 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
     await dbFirebase.setVisibilitySettings(newSettings);
     visibilitySettings = newSettings;
     applyVisibility();
-    // Перерендерим выборы (они могут скрыться/показаться)
     await renderElections();
-    // Также обновим навигацию, если текущая страница скрыта – переключим на главную
     const currentActive = document.querySelector('#mainNav a.active');
     if (currentActive) {
         const page = currentActive.dataset.page;
         const key = pageMap[page];
         if (key && visibilitySettings[key] === false) {
-            // Переключаем на главную
             showPage('home');
         }
     }
     alert('✅ Настройки сохранены!');
 });
 
-// Применить фон
 document.getElementById('applyBgBtn').addEventListener('click', async function() {
     const fileInput = document.getElementById('bgImage');
     if (!fileInput.files || !fileInput.files[0]) {
@@ -1172,7 +1159,7 @@ function setupEventListeners() {
         closeProfileModal();
     });
 
-    // ----- ADMIN FORMS (новости, члены) -----
+    // ----- ADMIN FORMS -----
     const addNewsForm = document.getElementById('addNewsForm');
     const addMemberForm = document.getElementById('addMemberForm');
 
@@ -1237,7 +1224,6 @@ function setupEventListeners() {
     const allPageTriggers = document.querySelectorAll('[data-page]');
 
     function showPage(pageId) {
-        // Проверяем, разрешена ли эта страница
         const pageMap = {
             about: 'showAbout',
             symbols: 'showSymbols',
@@ -1248,7 +1234,6 @@ function setupEventListeners() {
         if (pageId !== 'home') {
             const key = pageMap[pageId];
             if (key && visibilitySettings[key] === false) {
-                // Если страница скрыта, переключаем на главную
                 pageId = 'home';
             }
         }
