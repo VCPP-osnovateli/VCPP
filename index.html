@@ -399,53 +399,53 @@
                 </form>
             </div>
 
-            <!-- Вкладка: Символика (админ) – здесь можно добавлять картинки -->
+            <!-- Вкладка: Символика (админ) – с кнопками выбора файла -->
             <div class="admin-panel-section" id="adminTabSymbolsAdmin">
                 <p style="margin-bottom:16px; color:#3a4a5e;">Загрузка изображений для герба, штампа и печати.</p>
                 <form id="symbolsAdminForm">
                     <!-- Герб -->
-                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
-                        <h4 style="margin-bottom:8px;">Герб</h4>
+                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px; background:var(--white);">
+                        <h4 style="margin-bottom:8px; color:var(--dark-blue);">🛡️ Герб</h4>
                         <div class="form-group" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <label class="custom-file-upload" style="display:inline-block; padding:8px 16px; background:var(--red); color:var(--white); border-radius:30px; cursor:pointer; font-size:14px; font-weight:600;">
+                            <label class="custom-file-upload" style="display:inline-block; padding:10px 20px; background:var(--red); color:var(--white); border-radius:30px; cursor:pointer; font-size:15px; font-weight:600; transition:0.3s;">
                                 📁 Выбрать файл
                                 <input type="file" id="symbolGerbFile" accept="image/*" style="display:none;" />
                             </label>
-                            <span id="symbolGerbFileName" style="font-size:13px; color:#6a7a8e;">Файл не выбран</span>
+                            <span id="symbolGerbFileName" style="font-size:14px; color:#6a7a8e;">Файл не выбран</span>
                         </div>
-                        <div id="symbolGerbPreview" style="margin-top:8px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;"></div>
-                        <button type="button" class="btn btn-danger btn-sm delete-symbol-btn" data-key="gerb" style="margin-top:8px;">🗑️ Удалить герб</button>
+                        <div id="symbolGerbPreview" style="margin-top:10px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;"></div>
+                        <button type="button" class="btn btn-danger btn-sm delete-symbol-btn" data-key="gerb" style="margin-top:10px;">🗑️ Удалить герб</button>
                     </div>
 
                     <!-- Штамп -->
-                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
-                        <h4 style="margin-bottom:8px;">Штамп</h4>
+                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px; background:var(--white);">
+                        <h4 style="margin-bottom:8px; color:var(--dark-blue);">🔖 Штамп</h4>
                         <div class="form-group" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <label class="custom-file-upload" style="display:inline-block; padding:8px 16px; background:var(--red); color:var(--white); border-radius:30px; cursor:pointer; font-size:14px; font-weight:600;">
+                            <label class="custom-file-upload" style="display:inline-block; padding:10px 20px; background:var(--red); color:var(--white); border-radius:30px; cursor:pointer; font-size:15px; font-weight:600; transition:0.3s;">
                                 📁 Выбрать файл
                                 <input type="file" id="symbolStampFile" accept="image/*" style="display:none;" />
                             </label>
-                            <span id="symbolStampFileName" style="font-size:13px; color:#6a7a8e;">Файл не выбран</span>
+                            <span id="symbolStampFileName" style="font-size:14px; color:#6a7a8e;">Файл не выбран</span>
                         </div>
-                        <div id="symbolStampPreview" style="margin-top:8px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;"></div>
-                        <button type="button" class="btn btn-danger btn-sm delete-symbol-btn" data-key="stamp" style="margin-top:8px;">🗑️ Удалить штамп</button>
+                        <div id="symbolStampPreview" style="margin-top:10px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;"></div>
+                        <button type="button" class="btn btn-danger btn-sm delete-symbol-btn" data-key="stamp" style="margin-top:10px;">🗑️ Удалить штамп</button>
                     </div>
 
                     <!-- Печать -->
-                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
-                        <h4 style="margin-bottom:8px;">Печать</h4>
+                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px; background:var(--white);">
+                        <h4 style="margin-bottom:8px; color:var(--dark-blue);">🔏 Печать</h4>
                         <div class="form-group" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <label class="custom-file-upload" style="display:inline-block; padding:8px 16px; background:var(--red); color:var(--white); border-radius:30px; cursor:pointer; font-size:14px; font-weight:600;">
+                            <label class="custom-file-upload" style="display:inline-block; padding:10px 20px; background:var(--red); color:var(--white); border-radius:30px; cursor:pointer; font-size:15px; font-weight:600; transition:0.3s;">
                                 📁 Выбрать файл
                                 <input type="file" id="symbolSealFile" accept="image/*" style="display:none;" />
                             </label>
-                            <span id="symbolSealFileName" style="font-size:13px; color:#6a7a8e;">Файл не выбран</span>
+                            <span id="symbolSealFileName" style="font-size:14px; color:#6a7a8e;">Файл не выбран</span>
                         </div>
-                        <div id="symbolSealPreview" style="margin-top:8px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;"></div>
-                        <button type="button" class="btn btn-danger btn-sm delete-symbol-btn" data-key="seal" style="margin-top:8px;">🗑️ Удалить печать</button>
+                        <div id="symbolSealPreview" style="margin-top:10px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;"></div>
+                        <button type="button" class="btn btn-danger btn-sm delete-symbol-btn" data-key="seal" style="margin-top:10px;">🗑️ Удалить печать</button>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить все изменения</button>
+                    <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; font-size:16px;">💾 Сохранить все изменения</button>
                 </form>
             </div>
 
