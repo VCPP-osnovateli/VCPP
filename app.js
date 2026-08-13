@@ -37,6 +37,9 @@ const dbFirebase = {
     async deleteNews(id) {
         await database.ref(`news/${id}`).remove();
     },
+    async updateNews(id, newData) {
+        await database.ref(`news/${id}`).update(newData);
+    },
 
     async getUsers() {
         const snapshot = await database.ref('users').once('value');
@@ -57,15 +60,6 @@ const dbFirebase = {
     async updateUser(id, newData) {
         await database.ref(`users/${id}`).update(newData);
     },
-    // Удаление всех пользователей с определённым статусом
-    async deleteUsersByStatus(status) {
-        const users = await this.getUsers();
-        const toDelete = users.filter(u => u.status === status);
-        for (const user of toDelete) {
-            await this.deleteUser(user.id);
-        }
-        return toDelete.length;
-    },
 
     async getMembers() {
         const snapshot = await database.ref('members').once('value');
@@ -85,6 +79,7 @@ const dbFirebase = {
         await database.ref(`members/${id}`).update(newData);
     },
 
+    // Настройки (включая символику и фон)
     async getSetting(key) {
         const snapshot = await database.ref(`settings/${key}`).once('value');
         return snapshot.val();
@@ -94,6 +89,17 @@ const dbFirebase = {
     },
     async deleteSetting(key) {
         await database.ref(`settings/${key}`).remove();
+    },
+
+    // Символика (используем ключи symbol_* в settings)
+    async getSymbol(symbolKey) {
+        return this.getSetting(symbolKey);
+    },
+    async setSymbol(symbolKey, imageData) {
+        await this.setSetting(symbolKey, imageData);
+    },
+    async resetSymbol(symbolKey) {
+        await this.deleteSetting(symbolKey);
     },
 
     async getElections() {
@@ -137,19 +143,9 @@ const dbFirebase = {
             }
         }
 
-        // Настройки
-        const settingsMap = {
-            'background': '',
-            'partyName': 'ВЦПП «Новая Россия»',
-            'slogan': 'Время строить Новую Россию!',
-            'showElections': true,
-            'showFooterBlock': true
-        };
-        for (const [key, defValue] of Object.entries(settingsMap)) {
-            const val = await this.getSetting(key);
-            if (val === null) {
-                await this.setSetting(key, defValue);
-            }
+        const bg = await this.getSetting('background');
+        if (bg === null) {
+            await this.setSetting('background', '');
         }
 
         const elections = await this.getElections();
@@ -218,14 +214,12 @@ async function renderNews() {
                         <div class="title">${item.title}</div>
                         <div class="date">${item.date}</div>
                     </div>
-                    <button class="btn btn-danger btn-delete-news" data-news-id="${item.id}">Удалить</button>
+                    <button class="btn btn-danger" data-news-id="${item.id}">Удалить</button>
                 </div>
             `).join('');
 
-            // Обработчики удаления новостей — используем делегирование
-            adminList.querySelectorAll('.btn-delete-news').forEach(btn => {
-                btn.addEventListener('click', async function(e) {
-                    e.stopPropagation();
+            adminList.querySelectorAll('[data-news-id]').forEach(btn => {
+                btn.addEventListener('click', async function() {
                     const id = this.getAttribute('data-news-id');
                     await dbFirebase.deleteNews(id);
                     await renderNews();
@@ -333,43 +327,17 @@ async function renderApplications() {
                 </div>
                 ${user.status === 'pending' ? `
                 <div class="app-actions">
-                    <button class="btn btn-success btn-approve-app" data-user-id="${user.id}">Одобрить</button>
-                    <button class="btn btn-danger btn-reject-app" data-user-id="${user.id}">Отклонить</button>
-                </div>` : `
-                <div class="app-actions">
-                    <button class="btn btn-danger btn-delete-app" data-user-id="${user.id}">🗑️ Удалить</button>
-                </div>`}
+                    <button class="btn btn-success" data-user-id="${user.id}" data-action="approve">Одобрить</button>
+                    <button class="btn btn-danger" data-user-id="${user.id}" data-action="reject">Отклонить</button>
+                </div>` : ''}
             </div>
         `).join('');
 
-        // Обработчики для заявок — используем делегирование через классы
-        list.querySelectorAll('.btn-approve-app').forEach(btn => {
-            btn.addEventListener('click', async function(e) {
-                e.stopPropagation();
+        list.querySelectorAll('[data-action]').forEach(btn => {
+            btn.addEventListener('click', async function() {
                 const userId = this.getAttribute('data-user-id');
-                await handleApplication(userId, 'approve');
-            });
-        });
-        list.querySelectorAll('.btn-reject-app').forEach(btn => {
-            btn.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                const userId = this.getAttribute('data-user-id');
-                await handleApplication(userId, 'reject');
-            });
-        });
-        list.querySelectorAll('.btn-delete-app').forEach(btn => {
-            btn.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                const userId = this.getAttribute('data-user-id');
-                if (confirm('Удалить эту заявку?')) {
-                    await dbFirebase.deleteUser(userId);
-                    await renderApplications();
-                    // Если удалённый пользователь был текущим — выходим из кабинета
-                    if (currentUser && currentUser.id === userId) {
-                        currentUser = null;
-                        saveUserState(null);
-                    }
-                }
+                const action = this.getAttribute('data-action');
+                await handleApplication(userId, action);
             });
         });
     } catch (e) {
@@ -400,6 +368,22 @@ async function handleApplication(userId, action) {
     }
 }
 
+// Удаление всех рассмотренных заявок
+document.getElementById('clearProcessedBtn').addEventListener('click', async function() {
+    if (!confirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
+    const users = await dbFirebase.getUsers();
+    const processed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
+    if (processed.length === 0) {
+        alert('Нет рассмотренных заявок для удаления.');
+        return;
+    }
+    for (const user of processed) {
+        await dbFirebase.deleteUser(user.id);
+    }
+    await renderApplications();
+    alert(`Удалено ${processed.length} заявок.`);
+});
+
 async function renderAdminMembers() {
     try {
         const members = await dbFirebase.getMembers();
@@ -416,15 +400,14 @@ async function renderAdminMembers() {
                     <div class="date">${m.position || 'Без должности'} • ${m.role === 'leader' ? 'Руководство' : m.role === 'deputy' ? 'Депутат' : 'Член партии'}</div>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-edit btn-sm btn-edit-member" data-member-id="${m.id}">✏️ Редактировать</button>
-                    <button class="btn btn-danger btn-sm btn-delete-member" data-member-id="${m.id}">Удалить</button>
+                    <button class="btn btn-edit btn-sm" data-member-id="${m.id}">✏️ Редактировать</button>
+                    <button class="btn btn-danger btn-sm" data-member-id="${m.id}">Удалить</button>
                 </div>
             </div>
         `).join('');
 
-        list.querySelectorAll('.btn-delete-member').forEach(btn => {
-            btn.addEventListener('click', async function(e) {
-                e.stopPropagation();
+        list.querySelectorAll('.btn-danger[data-member-id]').forEach(btn => {
+            btn.addEventListener('click', async function() {
                 const id = this.getAttribute('data-member-id');
                 if (confirm('Удалить этого члена из состава?')) {
                     await dbFirebase.deleteMember(id);
@@ -434,9 +417,8 @@ async function renderAdminMembers() {
             });
         });
 
-        list.querySelectorAll('.btn-edit-member').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
+        list.querySelectorAll('.btn-edit[data-member-id]').forEach(btn => {
+            btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-member-id');
                 openEditMemberModal(id);
             });
@@ -527,12 +509,6 @@ async function renderElections() {
     const container = document.getElementById('electionsBlock');
     if (!container) return;
 
-    const showElections = await dbFirebase.getSetting('showElections');
-    if (showElections === false) {
-        container.innerHTML = '';
-        return;
-    }
-
     if (!elections || !elections.parties || elections.parties.length === 0) {
         container.innerHTML = '<p>Данные о выборах временно отсутствуют.</p>';
         return;
@@ -557,8 +533,7 @@ async function renderElections() {
         </div>
     `;
 
-    const showFooterBlock = await dbFirebase.getSetting('showFooterBlock');
-    if (showFooterBlock !== false && (elections.footer || elections.footerDate)) {
+    if (elections.footer || elections.footerDate) {
         html += `
             <div style="background:var(--white); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow); margin-top:20px; border-left:4px solid var(--red);">
                 <p style="font-weight:600; color:var(--dark-blue);">🇷🇺 ${elections.footer || ''}</p>
@@ -614,7 +589,6 @@ function addPartyField(index, name = '', percent = '') {
     });
 }
 
-// Обработчик добавления партии (событие делегировано на документ)
 document.addEventListener('click', function(e) {
     if (e.target && e.target.id === 'addPartyBtn') {
         addPartyField(document.querySelectorAll('.party-field').length);
@@ -651,55 +625,151 @@ document.getElementById('electionsForm').addEventListener('submit', async functi
 });
 
 // ============================================================
-// SETTINGS
+// SYMBOLS (публичная страница)
 // ============================================================
-async function loadSettings() {
-    const partyName = await dbFirebase.getSetting('partyName');
-    const slogan = await dbFirebase.getSetting('slogan');
-    const showElections = await dbFirebase.getSetting('showElections');
-    const showFooterBlock = await dbFirebase.getSetting('showFooterBlock');
+async function renderSymbolsPage() {
+    const container = document.getElementById('symbolsContainer');
+    if (!container) return;
 
-    document.getElementById('settingsPartyName').value = partyName || '';
-    document.getElementById('settingsSlogan').value = slogan || '';
-    document.getElementById('settingsShowElections').checked = showElections !== false;
-    document.getElementById('settingsShowFooterBlock').checked = showFooterBlock !== false;
+    const gerb = await dbFirebase.getSymbol('symbol_gerb');
+    const stamp = await dbFirebase.getSymbol('symbol_stamp');
+    const seal = await dbFirebase.getSymbol('symbol_seal');
 
-    // Применить к шапке и футеру
-    updateHeaderFooter(partyName, slogan);
+    const symbols = [
+        { key: 'gerb', label: 'Герб ВЦПП', desc: 'Официальный герб партии.', image: gerb },
+        { key: 'stamp', label: 'Штамп', desc: 'Официальный штамп организации.', image: stamp },
+        { key: 'seal', label: 'Печать', desc: 'Официальная печать партии.', image: seal }
+    ];
+
+    let html = '';
+    symbols.forEach(s => {
+        const imgHtml = s.image && s.image.startsWith('data:image') ?
+            `<img src="${s.image}" alt="${s.label}" style="max-width:200px; max-height:200px; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />` :
+            `<div style="width:200px; height:200px; display:flex; align-items:center; justify-content:center; background:var(--light-gray); border-radius:12px; color:#6a7a8e; font-size:14px;">Изображение не загружено</div>`;
+        html += `
+            <div class="symbol-card">
+                <div class="symbol-image">
+                    ${imgHtml}
+                </div>
+                <h3>${s.label}</h3>
+                <p>${s.desc}</p>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
 }
 
-function updateHeaderFooter(partyName, slogan) {
-    const headerName = document.getElementById('headerPartyName');
-    const headerSlogan = document.getElementById('headerSlogan');
-    const footerName = document.getElementById('footerPartyName');
-    const footerSlogan = document.getElementById('footerSlogan');
+// ============================================================
+// SYMBOLS ADMIN
+// ============================================================
+async function loadSymbolsAdmin() {
+    const gerb = await dbFirebase.getSymbol('symbol_gerb');
+    const stamp = await dbFirebase.getSymbol('symbol_stamp');
+    const seal = await dbFirebase.getSymbol('symbol_seal');
 
-    if (headerName) {
-        // Сохраняем красный акцент
-        headerName.innerHTML = partyName ? partyName.replace(/«Новая Россия»/, '<span class="accent">«Новая Россия»</span>') : 'ВЦПП <span class="accent">«Новая Россия»</span>';
-    }
-    if (headerSlogan) headerSlogan.textContent = slogan || 'Время строить Новую Россию!';
-    if (footerName) {
-        footerName.innerHTML = partyName ? partyName.replace(/«Новая Россия»/, '<span class="red">«Новая Россия»</span>') : 'ВЦПП <span class="red">«Новая Россия»</span>';
-    }
-    if (footerSlogan) footerSlogan.textContent = slogan || 'Время строить Новую Россию!';
+    const updatePreview = (key, imageData, previewId, fileNameId) => {
+        const preview = document.getElementById(previewId);
+        const fileName = document.getElementById(fileNameId);
+        if (imageData && imageData.startsWith('data:image')) {
+            preview.innerHTML = `<img src="${imageData}" style="max-width:100px; max-height:100px; border-radius:8px; border:2px solid var(--red);" />`;
+            if (fileName) fileName.textContent = 'Изображение загружено';
+        } else {
+            preview.innerHTML = `<span style="color:#6a7a8e; font-size:13px;">Изображение не загружено</span>`;
+            if (fileName) fileName.textContent = 'Файл не выбран';
+        }
+    };
+
+    updatePreview('gerb', gerb, 'symbolGerbPreview', 'symbolGerbFileName');
+    updatePreview('stamp', stamp, 'symbolStampPreview', 'symbolStampFileName');
+    updatePreview('seal', seal, 'symbolSealPreview', 'symbolSealFileName');
 }
 
-document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+async function deleteSymbol(key) {
+    if (!confirm(`Удалить изображение для "${key}"?`)) return;
+    await dbFirebase.deleteSetting(`symbol_${key}`);
+    await loadSymbolsAdmin();
+    await renderSymbolsPage();
+    alert(`✅ Изображение "${key}" удалено.`);
+}
+
+// Обработчики для кнопок удаления в символике
+document.addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('delete-symbol-btn')) {
+        const key = e.target.getAttribute('data-key');
+        deleteSymbol(key);
+    }
+});
+
+// Отображение имени выбранного файла
+document.querySelectorAll('input[type="file"]').forEach(input => {
+    input.addEventListener('change', function() {
+        const idMap = {
+            'symbolGerbFile': 'symbolGerbFileName',
+            'symbolStampFile': 'symbolStampFileName',
+            'symbolSealFile': 'symbolSealFileName'
+        };
+        const spanId = idMap[this.id];
+        if (spanId) {
+            const span = document.getElementById(spanId);
+            if (span) {
+                if (this.files && this.files[0]) {
+                    span.textContent = this.files[0].name;
+                } else {
+                    span.textContent = 'Файл не выбран';
+                }
+            }
+        }
+    });
+});
+
+// Сохранение символики
+document.getElementById('symbolsAdminForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const partyName = document.getElementById('settingsPartyName').value.trim();
-    const slogan = document.getElementById('settingsSlogan').value.trim();
-    const showElections = document.getElementById('settingsShowElections').checked;
-    const showFooterBlock = document.getElementById('settingsShowFooterBlock').checked;
 
-    await dbFirebase.setSetting('partyName', partyName);
-    await dbFirebase.setSetting('slogan', slogan);
-    await dbFirebase.setSetting('showElections', showElections);
-    await dbFirebase.setSetting('showFooterBlock', showFooterBlock);
+    const fileInputs = {
+        gerb: document.getElementById('symbolGerbFile'),
+        stamp: document.getElementById('symbolStampFile'),
+        seal: document.getElementById('symbolSealFile')
+    };
 
-    updateHeaderFooter(partyName, slogan);
-    await renderElections();
-    alert('✅ Настройки сохранены!');
+    let hasChanges = false;
+    for (const [key, input] of Object.entries(fileInputs)) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            if (!file.type.startsWith('image/')) {
+                alert(`Файл для ${key} не является изображением.`);
+                return;
+            }
+            const data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e.target.error);
+                reader.readAsDataURL(file);
+            });
+            await dbFirebase.setSymbol(`symbol_${key}`, data);
+            input.value = '';
+            const idMap = {
+                'symbolGerbFile': 'symbolGerbFileName',
+                'symbolStampFile': 'symbolStampFileName',
+                'symbolSealFile': 'symbolSealFileName'
+            };
+            const spanId = idMap[input.id];
+            if (spanId) {
+                const span = document.getElementById(spanId);
+                if (span) span.textContent = 'Файл не выбран';
+            }
+            hasChanges = true;
+        }
+    }
+
+    if (!hasChanges) {
+        alert('Вы не выбрали ни одного файла для загрузки.');
+        return;
+    }
+
+    await loadSymbolsAdmin();
+    await renderSymbolsPage();
+    alert('✅ Символика обновлена!');
 });
 
 // ============================================================
@@ -745,7 +815,6 @@ function showProfileContent(user) {
     editProfileToggleBtn.textContent = '✏️ Редактировать профиль';
 }
 
-// Обработчики для профиля — используем отдельные привязки
 document.getElementById('editProfileToggleBtn').addEventListener('click', function() {
     const form = document.getElementById('profileEditForm');
     if (isEditingProfile) {
@@ -797,7 +866,6 @@ document.getElementById('editProfileForm').addEventListener('submit', async func
 document.getElementById('withdrawApplicationBtn').addEventListener('click', async function() {
     if (!currentUser || currentUser.status !== 'pending') return;
     if (!confirm('Вы уверены, что хотите отозвать свою заявку?')) return;
-
     try {
         await dbFirebase.deleteUser(currentUser.id);
         currentUser = null;
@@ -873,22 +941,7 @@ async function restoreState() {
 }
 
 // ============================================================
-// CLEAR REVIEWED APPLICATIONS
-// ============================================================
-document.getElementById('clearReviewedAppsBtn').addEventListener('click', async function() {
-    if (!confirm('Удалить все одобренные и отклонённые заявки? Это действие необратимо.')) return;
-    try {
-        const count = await dbFirebase.deleteUsersByStatus('approved');
-        const count2 = await dbFirebase.deleteUsersByStatus('rejected');
-        await renderApplications();
-        alert(`✅ Удалено ${count + count2} заявок (одобренных и отклонённых).`);
-    } catch (e) {
-        alert('Ошибка при удалении: ' + e.message);
-    }
-});
-
-// ============================================================
-// EVENT LISTENERS (основные модалки и навигация)
+// EVENT LISTENERS
 // ============================================================
 function setupEventListeners() {
     const loginModal = document.getElementById('loginModal');
@@ -917,7 +970,7 @@ function setupEventListeners() {
             renderApplications();
             renderAdminMembers();
             populateElectionsForm();
-            loadSettings();
+            loadSymbolsAdmin();
         } else {
             openLoginModal();
         }
@@ -954,7 +1007,7 @@ function setupEventListeners() {
             renderApplications();
             renderAdminMembers();
             populateElectionsForm();
-            loadSettings();
+            loadSymbolsAdmin();
         } else {
             alert('Неверный логин или пароль!');
         }
@@ -991,7 +1044,7 @@ function setupEventListeners() {
         closeProfileModal();
     });
 
-    // ADMIN FORMS
+    // ----- ADMIN FORMS -----
     const addNewsForm = document.getElementById('addNewsForm');
     const addMemberForm = document.getElementById('addMemberForm');
     const backgroundForm = document.getElementById('backgroundForm');
@@ -1077,7 +1130,7 @@ function setupEventListeners() {
         }
     });
 
-    // NAVIGATION
+    // ----- NAVIGATION -----
     const navLinks = document.querySelectorAll('.nav-links a');
     const pageSections = {
         home: document.getElementById('page-home'),
@@ -1122,7 +1175,7 @@ function setupEventListeners() {
         });
     });
 
-    // JOIN FORM
+    // ----- JOIN FORM -----
     document.getElementById('joinForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const fullName = document.getElementById('joinFullName').value.trim();
@@ -1140,7 +1193,17 @@ function setupEventListeners() {
         }
 
         try {
-            await dbFirebase.addUser({ fullName, icAge, oocAge, passport, passportLink, motivation, support, discord, status: 'pending' });
+            await dbFirebase.addUser({
+                fullName,
+                icAge,
+                oocAge,
+                passport,
+                passportLink,
+                motivation,
+                support,
+                discord,
+                status: 'pending'
+            });
             alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
             this.reset();
             if (isAdminLoggedIn) await renderApplications();
@@ -1149,7 +1212,7 @@ function setupEventListeners() {
         }
     });
 
-    // ADMIN TABS
+    // ----- ADMIN TABS -----
     document.querySelectorAll('.admin-tabs button').forEach(tab => {
         tab.addEventListener('click', function() {
             document.querySelectorAll('.admin-tabs button').forEach(t => t.classList.remove('active'));
@@ -1160,11 +1223,10 @@ function setupEventListeners() {
             if (tabName === 'applications') renderApplications();
             if (tabName === 'members') renderAdminMembers();
             if (tabName === 'elections') populateElectionsForm();
-            if (tabName === 'settings') loadSettings();
+            if (tabName === 'symbols-admin') loadSymbolsAdmin();
         });
     });
 
-    // Set default active page
     const currentActive = document.querySelector('.nav-links a.active');
     if (!currentActive) {
         const homeLink = document.querySelector('.nav-links a[data-page="home"]');
@@ -1186,13 +1248,10 @@ document.addEventListener('DOMContentLoaded', function() {
             await renderApplications();
             await renderAdminMembers();
             await renderElections();
+            await renderSymbolsPage();
             const members = await dbFirebase.getMembers();
             document.getElementById('totalMembers').textContent = members.length;
             await applyBackground();
-            // Загружаем настройки в шапку/футер
-            const partyName = await dbFirebase.getSetting('partyName');
-            const slogan = await dbFirebase.getSetting('slogan');
-            updateHeaderFooter(partyName, slogan);
         } catch (e) {
             console.error('Ошибка инициализации:', e);
         }
