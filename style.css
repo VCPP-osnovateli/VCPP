@@ -907,18 +907,6 @@ ul { list-style: none; }
 }
 .symbol-card p { font-size: 14px; color: #3a4a5e; }
 
-/* ===== PROFILE EDIT FORM ===== */
-#profileEditForm {
-    background: var(--light-gray);
-    padding: 16px;
-    border-radius: var(--radius);
-    margin-top: 12px;
-}
-#profileEditForm .form-group { margin-bottom: 12px; }
-#profileEditForm .form-group label { font-size: 13px; }
-#profileEditForm .form-group input,
-#profileEditForm .form-group textarea { font-size: 13px; padding: 6px 12px; }
-
 /* ===== CUSTOM FILE UPLOAD ===== */
 .custom-file-upload {
     display: inline-block;
@@ -939,6 +927,18 @@ ul { list-style: none; }
     font-size: 12px;
     border-radius: 30px;
 }
+
+/* ===== PROFILE EDIT FORM ===== */
+#profileEditForm {
+    background: var(--light-gray);
+    padding: 16px;
+    border-radius: var(--radius);
+    margin-top: 12px;
+}
+#profileEditForm .form-group { margin-bottom: 12px; }
+#profileEditForm .form-group label { font-size: 13px; }
+#profileEditForm .form-group input,
+#profileEditForm .form-group textarea { font-size: 13px; padding: 6px 12px; }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 992px) {
