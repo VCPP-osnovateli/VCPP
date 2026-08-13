@@ -687,117 +687,6 @@ async function renderSymbolsPage() {
 }
 
 // ============================================================
-// SYMBOLS ADMIN (загрузка картинок)
-// ============================================================
-async function loadSymbolsAdmin() {
-    const gerb = await dbFirebase.getSymbol('symbol_gerb');
-    const stamp = await dbFirebase.getSymbol('symbol_stamp');
-    const seal = await dbFirebase.getSymbol('symbol_seal');
-
-    const updatePreview = (key, imageData, previewId, fileNameId) => {
-        const preview = document.getElementById(previewId);
-        const fileName = document.getElementById(fileNameId);
-        if (imageData && imageData.startsWith('data:image')) {
-            preview.innerHTML = `<img src="${imageData}" style="max-width:120px; max-height:120px; border-radius:8px; border:2px solid var(--red);" />`;
-            if (fileName) fileName.textContent = '✅ Изображение загружено';
-        } else {
-            preview.innerHTML = `<span style="color:#6a7a8e; font-size:14px;">❌ Изображение не загружено</span>`;
-            if (fileName) fileName.textContent = '📂 Файл не выбран';
-        }
-    };
-
-    updatePreview('gerb', gerb, 'symbolGerbPreview', 'symbolGerbFileName');
-    updatePreview('stamp', stamp, 'symbolStampPreview', 'symbolStampFileName');
-    updatePreview('seal', seal, 'symbolSealPreview', 'symbolSealFileName');
-}
-
-async function deleteSymbol(key) {
-    if (!confirm(`Удалить изображение для "${key}"?`)) return;
-    await dbFirebase.deleteSetting(`symbol_${key}`);
-    await loadSymbolsAdmin();
-    await renderSymbolsPage();
-    alert(`✅ Изображение "${key}" удалено.`);
-}
-
-// Обработчики событий для символики
-document.addEventListener('click', function(e) {
-    if (e.target && e.target.classList.contains('delete-symbol-btn')) {
-        const key = e.target.getAttribute('data-key');
-        deleteSymbol(key);
-    }
-});
-
-document.querySelectorAll('input[type="file"]').forEach(input => {
-    input.addEventListener('change', function() {
-        const idMap = {
-            'symbolGerbFile': 'symbolGerbFileName',
-            'symbolStampFile': 'symbolStampFileName',
-            'symbolSealFile': 'symbolSealFileName'
-        };
-        const spanId = idMap[this.id];
-        if (spanId) {
-            const span = document.getElementById(spanId);
-            if (span) {
-                if (this.files && this.files[0]) {
-                    span.textContent = `📎 ${this.files[0].name}`;
-                } else {
-                    span.textContent = '📂 Файл не выбран';
-                }
-            }
-        }
-    });
-});
-
-document.getElementById('symbolsAdminForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const fileInputs = {
-        gerb: document.getElementById('symbolGerbFile'),
-        stamp: document.getElementById('symbolStampFile'),
-        seal: document.getElementById('symbolSealFile')
-    };
-
-    let hasChanges = false;
-    for (const [key, input] of Object.entries(fileInputs)) {
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            if (!file.type.startsWith('image/')) {
-                alert(`Файл для ${key} не является изображением.`);
-                return;
-            }
-            const data = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(e.target.error);
-                reader.readAsDataURL(file);
-            });
-            await dbFirebase.setSymbol(`symbol_${key}`, data);
-            input.value = '';
-            const idMap = {
-                'symbolGerbFile': 'symbolGerbFileName',
-                'symbolStampFile': 'symbolStampFileName',
-                'symbolSealFile': 'symbolSealFileName'
-            };
-            const spanId = idMap[input.id];
-            if (spanId) {
-                const span = document.getElementById(spanId);
-                if (span) span.textContent = '📂 Файл не выбран';
-            }
-            hasChanges = true;
-        }
-    }
-
-    if (!hasChanges) {
-        alert('Вы не выбрали ни одного файла для загрузки.');
-        return;
-    }
-
-    await loadSymbolsAdmin();
-    await renderSymbolsPage();
-    alert('✅ Символика обновлена!');
-});
-
-// ============================================================
 // VISIBILITY SETTINGS
 // ============================================================
 async function loadVisibilitySettings() {
@@ -1084,7 +973,6 @@ function setupEventListeners() {
             renderApplications();
             renderAdminMembers();
             populateElectionsForm();
-            loadSymbolsAdmin();
             loadVisibilitySettings();
         } else {
             openLoginModal();
@@ -1122,7 +1010,6 @@ function setupEventListeners() {
             renderApplications();
             renderAdminMembers();
             populateElectionsForm();
-            loadSymbolsAdmin();
             loadVisibilitySettings();
         } else {
             alert('Неверный логин или пароль!');
@@ -1319,7 +1206,6 @@ function setupEventListeners() {
             if (tabName === 'applications') renderApplications();
             if (tabName === 'members') renderAdminMembers();
             if (tabName === 'elections') populateElectionsForm();
-            if (tabName === 'symbols-admin') loadSymbolsAdmin();
             if (tabName === 'settings') loadVisibilitySettings();
         });
     });
