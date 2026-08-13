@@ -376,6 +376,11 @@
             <!-- Вкладка: Заявки -->
             <div class="admin-panel-section" id="adminTabApplications">
                 <p style="margin-bottom:16px; color:#3a4a5e;">Просмотр и обработка заявок на вступление.</p>
+                <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-danger" id="deleteApprovedBtn">🗑️ Удалить одобренные</button>
+                    <button class="btn btn-danger" id="deleteRejectedBtn">🗑️ Удалить отклонённые</button>
+                    <button class="btn btn-danger" id="deleteAllReviewedBtn">🗑️ Удалить все рассмотренные</button>
+                </div>
                 <div id="applicationsList"></div>
             </div>
 
@@ -443,16 +448,40 @@
             <!-- Вкладка: Настройки -->
             <div class="admin-panel-section" id="adminTabSettings">
                 <p style="margin-bottom:16px; color:#3a4a5e;">Настройка внешнего вида сайта.</p>
-                <form id="backgroundForm">
+                <form id="settingsForm">
                     <div class="form-group">
-                        <label>Фоновое изображение (загрузить с ПК)</label>
-                        <input type="file" id="bgImage" accept="image/*" />
+                        <label>Тема оформления</label>
+                        <select id="themeSelect">
+                            <option value="light">Светлая</option>
+                            <option value="dark">Тёмная</option>
+                            <option value="auto">Авто (по системе)</option>
+                        </select>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;">📷 Применить фон</button>
-                    <button type="button" class="btn btn-danger" id="resetBgBtn" style="margin-top:8px;">🗑️ Сбросить фон</button>
+                    <div class="form-group">
+                        <label>Размер шрифта</label>
+                        <select id="fontSizeSelect">
+                            <option value="small">Маленький</option>
+                            <option value="medium" selected>Средний</option>
+                            <option value="large">Большой</option>
+                            <option value="xlarge">Очень большой</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check" style="justify-content:flex-start; gap:12px;">
+                            <input type="checkbox" id="showNewsPreview" checked />
+                            <label for="showNewsPreview">Показывать превью новостей на главной</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check" style="justify-content:flex-start; gap:12px;">
+                            <input type="checkbox" id="enableAnimations" checked />
+                            <label for="enableAnimations">Включить анимации переходов</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить настройки</button>
                 </form>
                 <hr style="margin: 24px 0; border: 0; border-top: 2px solid var(--light-gray);" />
-                <p><small>Изображение будет применено ко всей странице. Рекомендуемый размер: 1920x1080.</small></p>
+                <p><small>Настройки сохраняются в localStorage и действуют только на вашем устройстве.</small></p>
             </div>
 
             <div style="margin-top:20px; text-align:right;">
@@ -520,9 +549,7 @@
             <!-- Содержимое личного кабинета -->
             <div id="profileContent" style="display:none;">
                 <div id="profileInfo"></div>
-                <!-- Кнопка для переключения в режим редактирования -->
                 <button class="btn btn-edit" id="editProfileToggleBtn" style="margin-top:12px;">✏️ Редактировать профиль</button>
-                <!-- Форма редактирования (скрыта по умолчанию) -->
                 <div id="profileEditForm" style="display:none; margin-top:16px;">
                     <h4 style="margin-bottom:8px;">Редактирование профиля</h4>
                     <form id="editProfileForm">
@@ -555,11 +582,8 @@
                     </form>
                 </div>
 
-                <!-- Дополнительные действия в зависимости от статуса -->
                 <div id="profileActions" style="margin-top:16px;">
-                    <!-- Кнопка отзыва заявки (только для pending) -->
                     <button class="btn btn-danger" id="withdrawApplicationBtn" style="display:none;">🗑️ Отозвать заявку</button>
-                    <!-- Кнопка повторной подачи (только для rejected) -->
                     <button class="btn btn-warning" id="resubmitApplicationBtn" style="display:none;">🔄 Подать заново</button>
                 </div>
 
