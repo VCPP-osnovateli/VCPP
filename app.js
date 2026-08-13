@@ -79,7 +79,7 @@ const dbFirebase = {
         await database.ref(`members/${id}`).update(newData);
     },
 
-    // Настройки (включая символику и фон)
+    // Настройки
     async getSetting(key) {
         const snapshot = await database.ref(`settings/${key}`).once('value');
         return snapshot.val();
@@ -91,7 +91,7 @@ const dbFirebase = {
         await database.ref(`settings/${key}`).remove();
     },
 
-    // Символика (используем ключи symbol_* в settings)
+    // Символика (используем ключи symbol_*)
     async getSymbol(symbolKey) {
         return this.getSetting(symbolKey);
     },
@@ -113,6 +113,28 @@ const dbFirebase = {
     },
     async setElections(data) {
         await database.ref('elections').set(data);
+    },
+
+    // Настройки видимости (сохраняем как объект в settings/visibility)
+    async getVisibilitySettings() {
+        const val = await this.getSetting('visibility');
+        if (!val) {
+            // Значения по умолчанию – всё включено
+            const defaults = {
+                showElections: true,
+                showComposition: true,
+                showPress: true,
+                showSymbols: true,
+                showAbout: true,
+                showJoin: true
+            };
+            await this.setSetting('visibility', defaults);
+            return defaults;
+        }
+        return val;
+    },
+    async setVisibilitySettings(settings) {
+        await this.setSetting('visibility', settings);
     },
 
     async seed() {
@@ -166,6 +188,9 @@ const dbFirebase = {
             };
             await this.setElections(defaultElections);
         }
+
+        // Visibility settings – если нет, создаём
+        await this.getVisibilitySettings();
     }
 };
 
@@ -175,6 +200,7 @@ const dbFirebase = {
 let isAdminLoggedIn = false;
 let currentUser = null;
 let isEditingProfile = false;
+let visibilitySettings = {};
 
 // ============================================================
 // RENDER FUNCTIONS
@@ -368,7 +394,6 @@ async function handleApplication(userId, action) {
     }
 }
 
-// Удаление всех рассмотренных заявок
 document.getElementById('clearProcessedBtn').addEventListener('click', async function() {
     if (!confirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
     const users = await dbFirebase.getUsers();
@@ -506,8 +531,13 @@ editMemberForm.addEventListener('submit', async function(e) {
 // ============================================================
 async function renderElections() {
     const elections = await dbFirebase.getElections();
-    const container = document.getElementById('electionsBlock');
+    const container = document.getElementById('electionsBlockContainer');
     if (!container) return;
+
+    if (!visibilitySettings.showElections) {
+        container.innerHTML = '';
+        return;
+    }
 
     if (!elections || !elections.parties || elections.parties.length === 0) {
         container.innerHTML = '<p>Данные о выборах временно отсутствуют.</p>';
@@ -692,7 +722,6 @@ async function deleteSymbol(key) {
     alert(`✅ Изображение "${key}" удалено.`);
 }
 
-// Обработчики для кнопок удаления в символике
 document.addEventListener('click', function(e) {
     if (e.target && e.target.classList.contains('delete-symbol-btn')) {
         const key = e.target.getAttribute('data-key');
@@ -700,7 +729,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Отображение имени выбранного файла
 document.querySelectorAll('input[type="file"]').forEach(input => {
     input.addEventListener('change', function() {
         const idMap = {
@@ -722,7 +750,6 @@ document.querySelectorAll('input[type="file"]').forEach(input => {
     });
 });
 
-// Сохранение символики
 document.getElementById('symbolsAdminForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -770,6 +797,105 @@ document.getElementById('symbolsAdminForm').addEventListener('submit', async fun
     await loadSymbolsAdmin();
     await renderSymbolsPage();
     alert('✅ Символика обновлена!');
+});
+
+// ============================================================
+// VISIBILITY SETTINGS
+// ============================================================
+async function loadVisibilitySettings() {
+    visibilitySettings = await dbFirebase.getVisibilitySettings();
+    // Обновляем чекбоксы в админке
+    document.getElementById('showElections').checked = visibilitySettings.showElections !== false;
+    document.getElementById('showComposition').checked = visibilitySettings.showComposition !== false;
+    document.getElementById('showPress').checked = visibilitySettings.showPress !== false;
+    document.getElementById('showSymbols').checked = visibilitySettings.showSymbols !== false;
+    document.getElementById('showAbout').checked = visibilitySettings.showAbout !== false;
+    document.getElementById('showJoin').checked = visibilitySettings.showJoin !== false;
+    applyVisibility();
+}
+
+function applyVisibility() {
+    // Навигация
+    const navLinks = document.querySelectorAll('#mainNav a');
+    const pageMap = {
+        about: 'showAbout',
+        symbols: 'showSymbols',
+        composition: 'showComposition',
+        press: 'showPress',
+        join: 'showJoin'
+    };
+    navLinks.forEach(link => {
+        const page = link.dataset.page;
+        if (page && pageMap[page]) {
+            link.style.display = visibilitySettings[pageMap[page]] !== false ? '' : 'none';
+        }
+    });
+
+    // Скрываем/показываем страницы при переключении (активная страница может стать скрытой)
+    // Но мы не будем автоматически переключать, просто обновим видимость при переходе.
+}
+
+// Сохранение настроек
+document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const newSettings = {
+        showElections: document.getElementById('showElections').checked,
+        showComposition: document.getElementById('showComposition').checked,
+        showPress: document.getElementById('showPress').checked,
+        showSymbols: document.getElementById('showSymbols').checked,
+        showAbout: document.getElementById('showAbout').checked,
+        showJoin: document.getElementById('showJoin').checked
+    };
+
+    await dbFirebase.setVisibilitySettings(newSettings);
+    visibilitySettings = newSettings;
+    applyVisibility();
+    // Перерендерим выборы (они могут скрыться/показаться)
+    await renderElections();
+    // Также обновим навигацию, если текущая страница скрыта – переключим на главную
+    const currentActive = document.querySelector('#mainNav a.active');
+    if (currentActive) {
+        const page = currentActive.dataset.page;
+        const key = pageMap[page];
+        if (key && visibilitySettings[key] === false) {
+            // Переключаем на главную
+            showPage('home');
+        }
+    }
+    alert('✅ Настройки сохранены!');
+});
+
+// Применить фон
+document.getElementById('applyBgBtn').addEventListener('click', async function() {
+    const fileInput = document.getElementById('bgImage');
+    if (!fileInput.files || !fileInput.files[0]) {
+        alert('Выберите изображение.');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (!file.type.startsWith('image/')) {
+        alert('Пожалуйста, выберите файл изображения.');
+        return;
+    }
+    const photoData = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e.target.error);
+        reader.readAsDataURL(file);
+    });
+    await dbFirebase.setSetting('background', photoData);
+    await applyBackground();
+    alert('Фон успешно обновлён!');
+    fileInput.value = '';
+});
+
+document.getElementById('resetBgBtn').addEventListener('click', async function() {
+    if (confirm('Сбросить фоновое изображение?')) {
+        await dbFirebase.setSetting('background', '');
+        await applyBackground();
+        alert('Фон сброшен.');
+    }
 });
 
 // ============================================================
@@ -971,6 +1097,7 @@ function setupEventListeners() {
             renderAdminMembers();
             populateElectionsForm();
             loadSymbolsAdmin();
+            loadVisibilitySettings();
         } else {
             openLoginModal();
         }
@@ -1008,6 +1135,7 @@ function setupEventListeners() {
             renderAdminMembers();
             populateElectionsForm();
             loadSymbolsAdmin();
+            loadVisibilitySettings();
         } else {
             alert('Неверный логин или пароль!');
         }
@@ -1044,11 +1172,9 @@ function setupEventListeners() {
         closeProfileModal();
     });
 
-    // ----- ADMIN FORMS -----
+    // ----- ADMIN FORMS (новости, члены) -----
     const addNewsForm = document.getElementById('addNewsForm');
     const addMemberForm = document.getElementById('addMemberForm');
-    const backgroundForm = document.getElementById('backgroundForm');
-    const resetBgBtn = document.getElementById('resetBgBtn');
 
     addNewsForm.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -1098,38 +1224,6 @@ function setupEventListeners() {
         fileInput.value = '';
     });
 
-    backgroundForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const fileInput = document.getElementById('bgImage');
-        if (!fileInput.files || !fileInput.files[0]) {
-            alert('Выберите изображение.');
-            return;
-        }
-        const file = fileInput.files[0];
-        if (!file.type.startsWith('image/')) {
-            alert('Пожалуйста, выберите файл изображения.');
-            return;
-        }
-        const photoData = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => reject(e.target.error);
-            reader.readAsDataURL(file);
-        });
-        await dbFirebase.setSetting('background', photoData);
-        await applyBackground();
-        alert('Фон успешно обновлён!');
-        fileInput.value = '';
-    });
-
-    resetBgBtn.addEventListener('click', async function() {
-        if (confirm('Сбросить фоновое изображение?')) {
-            await dbFirebase.setSetting('background', '');
-            await applyBackground();
-            alert('Фон сброшен.');
-        }
-    });
-
     // ----- NAVIGATION -----
     const navLinks = document.querySelectorAll('.nav-links a');
     const pageSections = {
@@ -1143,6 +1237,22 @@ function setupEventListeners() {
     const allPageTriggers = document.querySelectorAll('[data-page]');
 
     function showPage(pageId) {
+        // Проверяем, разрешена ли эта страница
+        const pageMap = {
+            about: 'showAbout',
+            symbols: 'showSymbols',
+            composition: 'showComposition',
+            press: 'showPress',
+            join: 'showJoin'
+        };
+        if (pageId !== 'home') {
+            const key = pageMap[pageId];
+            if (key && visibilitySettings[key] === false) {
+                // Если страница скрыта, переключаем на главную
+                pageId = 'home';
+            }
+        }
+
         Object.values(pageSections).forEach(el => el.classList.remove('active'));
         const target = pageSections[pageId];
         if (target) target.classList.add('active');
@@ -1224,6 +1334,7 @@ function setupEventListeners() {
             if (tabName === 'members') renderAdminMembers();
             if (tabName === 'elections') populateElectionsForm();
             if (tabName === 'symbols-admin') loadSymbolsAdmin();
+            if (tabName === 'settings') loadVisibilitySettings();
         });
     });
 
@@ -1243,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             await dbFirebase.seed();
             await restoreState();
+            await loadVisibilitySettings();
             await renderNews();
             await renderComposition();
             await renderApplications();
