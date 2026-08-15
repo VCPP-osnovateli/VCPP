@@ -609,7 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
         checkMaintenanceMode();
     });
 
-    // ----- РЕГИСТРАЦИЯ -----
+    // ----- РЕГИСТРАЦИЯ (с паролем) -----
     document.getElementById('registerForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const fullName = document.getElementById('regFullName').value.trim();
@@ -617,8 +617,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const passport = document.getElementById('regPassport').value.trim();
         const age = parseInt(document.getElementById('regAge').value);
         const discord = document.getElementById('regDiscord').value.trim();
+        const password = document.getElementById('regPassword').value.trim();
 
-        if (!fullName || !district || !passport || !age || !discord) {
+        if (!fullName || !district || !passport || !age || !discord || !password) {
             alert('Заполните все поля!');
             return;
         }
@@ -629,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const newUser = { fullName, district, passport, age, discord, role: 'user', status: 'registered' };
+        const newUser = { fullName, district, passport, age, discord, password, role: 'user', status: 'registered' };
         await database.ref('users').push(newUser);
         alert('✅ Регистрация успешна! Теперь войдите в личный кабинет.');
         closeModal('registerModal');
@@ -651,22 +652,24 @@ document.addEventListener('DOMContentLoaded', function() {
         openModal('profileModal');
     });
 
-    // ----- ВХОД В ЛИЧНЫЙ КАБИНЕТ -----
+    // ----- ВХОД В ЛИЧНЫЙ КАБИНЕТ (с паролем) -----
     document.getElementById('profileLogin').addEventListener('submit', async function(e) {
         e.preventDefault();
         const passport = document.getElementById('profileLoginPassport').value.trim();
-        if (!passport) {
-            alert('Введите номер паспорта.');
+        const password = document.getElementById('profileLoginPassword').value.trim();
+        if (!passport || !password) {
+            alert('Введите паспорт и пароль.');
             return;
         }
         const users = await loadUsers();
         const user = users.find(u => u.passport === passport && u.status === 'registered');
-        if (user) {
+        if (user && user.password === password) {
             localStorage.setItem('user_id', user.id);
             showProfileContent(user);
             alert('✅ Добро пожаловать в личный кабинет!');
+            document.getElementById('profileLoginPassword').value = '';
         } else {
-            alert('Пользователь с таким паспортом не найден. Зарегистрируйтесь.');
+            alert('Неверный паспорт или пароль.');
         }
     });
 
@@ -695,9 +698,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('editProfileDistrict').value = user.district || '';
         document.getElementById('editProfileAge').value = user.age || '';
         document.getElementById('editProfileDiscord').value = user.discord || '';
+        document.getElementById('editProfilePassword').value = '';
     }
 
-    // ----- РЕДАКТИРОВАНИЕ ПРОФИЛЯ -----
+    // ----- РЕДАКТИРОВАНИЕ ПРОФИЛЯ (с возможностью смены пароля) -----
     document.getElementById('editProfileToggleBtn').addEventListener('click', function() {
         const form = document.getElementById('profileEditForm');
         if (form.style.display === 'none') {
@@ -725,19 +729,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const district = document.getElementById('editProfileDistrict').value.trim();
         const age = parseInt(document.getElementById('editProfileAge').value);
         const discord = document.getElementById('editProfileDiscord').value.trim();
+        const newPassword = document.getElementById('editProfilePassword').value.trim();
 
         if (!fullName || !district || !age || !discord) {
-            alert('Все поля обязательны для заполнения!');
+            alert('Все поля (кроме пароля) обязательны для заполнения!');
             return;
         }
 
-        await database.ref(`users/${userId}`).update({ fullName, district, age, discord });
+        const updateData = { fullName, district, age, discord };
+        if (newPassword) {
+            updateData.password = newPassword;
+        }
+
+        await database.ref(`users/${userId}`).update(updateData);
         alert('✅ Данные профиля обновлены!');
         const users = await loadUsers();
         const user = users.find(u => u.id === userId);
         if (user) showProfileContent(user);
         document.getElementById('profileEditForm').style.display = 'none';
         document.getElementById('editProfileToggleBtn').textContent = '✏️ Редактировать профиль';
+        document.getElementById('editProfilePassword').value = '';
     });
 
     // ----- ЗАЯВКА НА ВСТУПЛЕНИЕ -----
