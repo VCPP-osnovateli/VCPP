@@ -759,7 +759,7 @@ ul { list-style: none; }
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 100000;  /* ПОВЫШЕН, чтобы быть над заглушкой */
     padding: 20px;
 }
 .modal-overlay.open { display: flex; }
@@ -969,3 +969,26 @@ ul { list-style: none; }
 .text-center { text-align: center; }
 .text-red { color: var(--red); }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+/* ===== ДОПОЛНИТЕЛЬНО: стили для незаметной кнопки входа на заглушке ===== */
+#maintenanceLoginBtn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 4px 14px;
+    font-size: 11px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: 0.3s;
+    z-index: 100000;
+    font-family: inherit;
+    letter-spacing: 0.5px;
+}
+#maintenanceLoginBtn:hover {
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7);
+    border-color: rgba(255,255,255,0.2);
+}
