@@ -41,7 +41,6 @@ const dbFirebase = {
         await database.ref(`news/${id}`).update(newData);
     },
 
-    // Заявки на вступление (users) – они же пользователи, но с отдельным полем status
     async getUsers() {
         const snapshot = await database.ref('users').once('value');
         return this._toArray(snapshot);
@@ -62,7 +61,6 @@ const dbFirebase = {
         await database.ref(`users/${id}`).update(newData);
     },
 
-    // Члены партии (отдельно от пользователей)
     async getMembers() {
         const snapshot = await database.ref('members').once('value');
         return this._toArray(snapshot);
@@ -81,7 +79,6 @@ const dbFirebase = {
         await database.ref(`members/${id}`).update(newData);
     },
 
-    // Настройки (символика, фон, видимость, контент)
     async getSetting(key) {
         const snapshot = await database.ref(`settings/${key}`).once('value');
         return snapshot.val();
@@ -93,7 +90,6 @@ const dbFirebase = {
         await database.ref(`settings/${key}`).remove();
     },
 
-    // Символика
     async getSymbol(symbolKey) {
         return this.getSetting(symbolKey);
     },
@@ -104,7 +100,6 @@ const dbFirebase = {
         await this.deleteSetting(symbolKey);
     },
 
-    // Выборы
     async getElections() {
         const snapshot = await database.ref('elections').once('value');
         const data = snapshot.val();
@@ -118,7 +113,6 @@ const dbFirebase = {
         await database.ref('elections').set(data);
     },
 
-    // Настройки видимости
     async getVisibilitySettings() {
         const val = await this.getSetting('visibility');
         if (!val) {
@@ -141,7 +135,6 @@ const dbFirebase = {
         await this.setSetting('visibility', settings);
     },
 
-    // Контент страниц (тексты)
     async getContent() {
         const val = await this.getSetting('content');
         if (!val) {
@@ -220,77 +213,35 @@ const dbFirebase = {
 // GLOBAL VARIABLES
 // ============================================================
 let isAdminLoggedIn = false;
-let currentUser = null; // зарегистрированный пользователь (для личного кабинета)
-let currentProfileUser = null; // для отображения в кабинете
+let currentUser = null;
 let isEditingProfile = false;
 let visibilitySettings = {};
 let contentSettings = {};
 
 // ============================================================
-// CUSTOM ALERT/CONFIRM (кастомные окна)
+// CUSTOM ALERT/CONFIRM (безопасные, с обычными alert для отладки)
 // ============================================================
-function customAlert(message, title = 'Уведомление') {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay open';
-        overlay.style.display = 'flex';
-        overlay.innerHTML = `
-            <div class="modal-box" style="max-width:400px;">
-                <div class="modal-title">${title}</div>
-                <p style="margin:16px 0; color:#3a4a5e;">${message}</p>
-                <button class="btn btn-primary" style="width:100%;" id="customAlertBtn">ОК</button>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-        document.getElementById('customAlertBtn').addEventListener('click', function() {
-            overlay.remove();
-            resolve();
-        });
-        overlay.addEventListener('click', function(e) {
-            if (e.target === this) {
-                overlay.remove();
-                resolve();
-            }
-        });
-    });
+// Временно отключаем кастомные alert, чтобы не мешали отладке
+window.alert = function(message) {
+    // Используем стандартный alert, но можно раскомментировать кастомный позже
+    return originalAlert(message);
+};
+const originalAlert = window.alert;
+const originalConfirm = window.confirm;
+
+// Можно оставить кастомные, но добавить fallback
+function safeAlert(message, title = 'Уведомление') {
+    // Просто используем стандартный alert для надёжности
+    alert(message);
 }
 
-function customConfirm(message) {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay open';
-        overlay.style.display = 'flex';
-        overlay.innerHTML = `
-            <div class="modal-box" style="max-width:400px;">
-                <div class="modal-title">Подтверждение</div>
-                <p style="margin:16px 0; color:#3a4a5e;">${message}</p>
-                <div style="display:flex; gap:12px;">
-                    <button class="btn btn-primary" style="flex:1;" id="customConfirmYes">Да</button>
-                    <button class="btn btn-danger" style="flex:1;" id="customConfirmNo">Нет</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-        document.getElementById('customConfirmYes').addEventListener('click', function() {
-            overlay.remove();
-            resolve(true);
-        });
-        document.getElementById('customConfirmNo').addEventListener('click', function() {
-            overlay.remove();
-            resolve(false);
-        });
-        overlay.addEventListener('click', function(e) {
-            if (e.target === this) {
-                overlay.remove();
-                resolve(false);
-            }
-        });
-    });
+function safeConfirm(message) {
+    return confirm(message);
 }
 
-// Переопределяем глобальные alert и confirm
-window.alert = customAlert;
-window.confirm = customConfirm;
+// Заменяем на безопасные версии
+window.alert = safeAlert;
+window.confirm = safeConfirm;
 
 // ============================================================
 // RENDER FUNCTIONS
@@ -337,7 +288,7 @@ async function renderNews() {
             adminList.querySelectorAll('[data-news-id]').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const id = this.getAttribute('data-news-id');
-                    if (await customConfirm('Удалить эту новость?')) {
+                    if (confirm('Удалить эту новость?')) {
                         await dbFirebase.deleteNews(id);
                         await renderNews();
                         await renderComposition();
@@ -347,6 +298,7 @@ async function renderNews() {
         }
     } catch (e) {
         console.error('renderNews error:', e);
+        alert('Ошибка при загрузке новостей. Проверьте консоль.');
     }
 }
 
@@ -416,14 +368,13 @@ async function renderComposition() {
         document.getElementById('totalMembers').textContent = members.length;
     } catch (e) {
         console.error('renderComposition error:', e);
+        alert('Ошибка при загрузке состава.');
     }
 }
 
-// ===== ЗАЯВКИ =====
 async function renderApplications() {
     try {
         const users = await dbFirebase.getUsers();
-        // Показываем только те, у которых есть поле status (заявки)
         const applications = users.filter(u => u.status !== undefined);
         const list = document.getElementById('applicationsList');
         if (!list) return;
@@ -464,6 +415,7 @@ async function renderApplications() {
         });
     } catch (e) {
         console.error('renderApplications error:', e);
+        alert('Ошибка при загрузке заявок.');
     }
 }
 
@@ -487,25 +439,25 @@ async function handleApplication(userId, action) {
         }
     } catch (e) {
         console.error('handleApplication error:', e);
+        alert('Ошибка при обработке заявки.');
     }
 }
 
-document.getElementById('clearProcessedBtn').addEventListener('click', async function() {
-    if (!await customConfirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
+document.getElementById('clearProcessedBtn')?.addEventListener('click', async function() {
+    if (!confirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
     const users = await dbFirebase.getUsers();
     const processed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
     if (processed.length === 0) {
-        await alert('Нет рассмотренных заявок для удаления.');
+        alert('Нет рассмотренных заявок для удаления.');
         return;
     }
     for (const user of processed) {
         await dbFirebase.deleteUser(user.id);
     }
     await renderApplications();
-    await alert(`Удалено ${processed.length} заявок.`);
+    alert(`Удалено ${processed.length} заявок.`);
 });
 
-// ===== УПРАВЛЕНИЕ СОСТАВОМ (админ) =====
 async function renderAdminMembers() {
     try {
         const members = await dbFirebase.getMembers();
@@ -531,7 +483,7 @@ async function renderAdminMembers() {
         list.querySelectorAll('.btn-danger[data-member-id]').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const id = this.getAttribute('data-member-id');
-                if (await customConfirm('Удалить этого члена из состава?')) {
+                if (confirm('Удалить этого члена из состава?')) {
                     await dbFirebase.deleteMember(id);
                     await renderAdminMembers();
                     await renderComposition();
@@ -547,10 +499,11 @@ async function renderAdminMembers() {
         });
     } catch (e) {
         console.error('renderAdminMembers error:', e);
+        alert('Ошибка при загрузке списка членов.');
     }
 }
 
-// ===== РЕДАКТИРОВАНИЕ ЧЛЕНА =====
+// ===== EDIT MEMBER MODAL =====
 const editMemberModal = document.getElementById('editMemberModal');
 const editMemberModalClose = document.getElementById('editMemberModalClose');
 const editMemberForm = document.getElementById('editMemberForm');
@@ -590,7 +543,7 @@ editMemberForm.addEventListener('submit', async function(e) {
     const role = editMemberRole.value;
 
     if (!name || !position) {
-        await alert('Заполните ФИО и должность!');
+        alert('Заполните ФИО и должность!');
         return;
     }
 
@@ -598,7 +551,7 @@ editMemberForm.addEventListener('submit', async function(e) {
     if (editMemberPhoto.files && editMemberPhoto.files[0]) {
         const file = editMemberPhoto.files[0];
         if (!file.type.startsWith('image/')) {
-            await alert('Пожалуйста, выберите файл изображения.');
+            alert('Пожалуйста, выберите файл изображения.');
             return;
         }
         photoData = await new Promise((resolve, reject) => {
@@ -618,7 +571,7 @@ editMemberForm.addEventListener('submit', async function(e) {
     await renderAdminMembers();
     await renderComposition();
     closeEditMemberModal();
-    await alert('✅ Данные члена партии обновлены!');
+    alert('✅ Данные члена партии обновлены!');
 });
 
 // ============================================================
@@ -739,14 +692,14 @@ document.getElementById('electionsForm').addEventListener('submit', async functi
     });
 
     if (parties.length === 0) {
-        await alert('Добавьте хотя бы одну партию с корректными данными.');
+        alert('Добавьте хотя бы одну партию с корректными данными.');
         return;
     }
 
     const electionsData = { parties, date, time, footer, footerDate };
     await dbFirebase.setElections(electionsData);
     await renderElections();
-    await alert('✅ Данные о выборах обновлены!');
+    alert('✅ Данные о выборах обновлены!');
 });
 
 // ============================================================
@@ -789,14 +742,11 @@ async function renderSymbolsPage() {
 // ============================================================
 async function loadVisibilitySettings() {
     visibilitySettings = await dbFirebase.getVisibilitySettings();
-    document.getElementById('showElections').checked = visibilitySettings.showElections !== false;
-    document.getElementById('showComposition').checked = visibilitySettings.showComposition !== false;
-    document.getElementById('showPress').checked = visibilitySettings.showPress !== false;
-    document.getElementById('showSymbols').checked = visibilitySettings.showSymbols !== false;
-    document.getElementById('showAbout').checked = visibilitySettings.showAbout !== false;
-    document.getElementById('showJoin').checked = visibilitySettings.showJoin !== false;
-    document.getElementById('showHistory').checked = visibilitySettings.showHistory !== false;
-    document.getElementById('showDocs').checked = visibilitySettings.showDocs !== false;
+    const checkboxes = ['showElections', 'showComposition', 'showPress', 'showSymbols', 'showAbout', 'showJoin', 'showHistory', 'showDocs'];
+    checkboxes.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = visibilitySettings[id] !== false;
+    });
     applyVisibility();
 }
 
@@ -819,7 +769,7 @@ function applyVisibility() {
     });
 }
 
-document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+document.getElementById('settingsForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const newSettings = {
@@ -845,17 +795,20 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
             showPage('home');
         }
     }
-    await alert('✅ Настройки сохранены!');
+    alert('✅ Настройки сохранены!');
 });
 
 // ============================================================
-// CONTENT SETTINGS (редактирование текстов)
+// CONTENT SETTINGS
 // ============================================================
 async function loadContentSettings() {
     contentSettings = await dbFirebase.getContent();
-    document.getElementById('heroTitleInput').value = contentSettings.heroTitle || '';
-    document.getElementById('heroSubtitleInput').value = contentSettings.heroSubtitle || '';
-    document.getElementById('missionTextInput').value = contentSettings.missionText || '';
+    const heroTitleInput = document.getElementById('heroTitleInput');
+    const heroSubtitleInput = document.getElementById('heroSubtitleInput');
+    const missionTextInput = document.getElementById('missionTextInput');
+    if (heroTitleInput) heroTitleInput.value = contentSettings.heroTitle || '';
+    if (heroSubtitleInput) heroSubtitleInput.value = contentSettings.heroSubtitle || '';
+    if (missionTextInput) missionTextInput.value = contentSettings.missionText || '';
     applyContent();
 }
 
@@ -868,7 +821,7 @@ function applyContent() {
     if (missionText) missionText.textContent = contentSettings.missionText || 'Всероссийская центристская политическая партия «Новая Россия» — это политическая сила, объединяющая граждан, стремящихся к построению свободного, справедливого и процветающего общества. Мы верим в силу демократических институтов, верховенство права и свободу личности. Наша цель — создание условий, при которых каждый гражданин сможет реализовать свой потенциал.';
 }
 
-document.getElementById('contentForm').addEventListener('submit', async function(e) {
+document.getElementById('contentForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const newContent = {
         heroTitle: document.getElementById('heroTitleInput').value,
@@ -878,7 +831,7 @@ document.getElementById('contentForm').addEventListener('submit', async function
     await dbFirebase.setContent(newContent);
     contentSettings = newContent;
     applyContent();
-    await alert('✅ Контент обновлён!');
+    alert('✅ Контент обновлён!');
 });
 
 // ============================================================
@@ -893,15 +846,15 @@ async function applyBackground() {
     }
 }
 
-document.getElementById('applyBgBtn').addEventListener('click', async function() {
+document.getElementById('applyBgBtn')?.addEventListener('click', async function() {
     const fileInput = document.getElementById('bgImage');
     if (!fileInput.files || !fileInput.files[0]) {
-        await alert('Выберите изображение.');
+        alert('Выберите изображение.');
         return;
     }
     const file = fileInput.files[0];
     if (!file.type.startsWith('image/')) {
-        await alert('Пожалуйста, выберите файл изображения.');
+        alert('Пожалуйста, выберите файл изображения.');
         return;
     }
     const photoData = await new Promise((resolve, reject) => {
@@ -912,15 +865,15 @@ document.getElementById('applyBgBtn').addEventListener('click', async function()
     });
     await dbFirebase.setSetting('background', photoData);
     await applyBackground();
-    await alert('Фон успешно обновлён!');
+    alert('Фон успешно обновлён!');
     fileInput.value = '';
 });
 
-document.getElementById('resetBgBtn').addEventListener('click', async function() {
-    if (await customConfirm('Сбросить фоновое изображение?')) {
+document.getElementById('resetBgBtn')?.addEventListener('click', async function() {
+    if (confirm('Сбросить фоновое изображение?')) {
         await dbFirebase.setSetting('background', '');
         await applyBackground();
-        await alert('Фон сброшен.');
+        alert('Фон сброшен.');
     }
 });
 
@@ -950,7 +903,7 @@ async function renderAdminUsers() {
     list.querySelectorAll('.btn-danger[data-user-id]').forEach(btn => {
         btn.addEventListener('click', async function() {
             const id = this.getAttribute('data-user-id');
-            if (await customConfirm('Удалить этого пользователя?')) {
+            if (confirm('Удалить этого пользователя?')) {
                 await dbFirebase.deleteUser(id);
                 await renderAdminUsers();
             }
@@ -958,14 +911,14 @@ async function renderAdminUsers() {
     });
 }
 
-document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+document.getElementById('addUserForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const fullName = document.getElementById('adminUserName').value.trim();
     const passport = document.getElementById('adminUserPassport').value.trim();
     const role = document.getElementById('adminUserRole').value;
 
     if (!fullName || !passport) {
-        await alert('Заполните все поля!');
+        alert('Заполните все поля!');
         return;
     }
 
@@ -973,9 +926,9 @@ document.getElementById('addUserForm').addEventListener('submit', async function
         await dbFirebase.addUser({ fullName, passport, role, status: 'registered' });
         await renderAdminUsers();
         this.reset();
-        await alert('✅ Пользователь добавлен!');
+        alert('✅ Пользователь добавлен!');
     } catch (err) {
-        await alert(err.message);
+        alert(err.message);
     }
 });
 
@@ -986,7 +939,7 @@ const registerModal = document.getElementById('registerModal');
 const registerModalClose = document.getElementById('registerModalClose');
 const registerForm = document.getElementById('registerForm');
 
-async function openRegisterModal() {
+function openRegisterModal() {
     registerModal.classList.add('open');
 }
 
@@ -1008,7 +961,7 @@ registerForm.addEventListener('submit', async function(e) {
     const discord = document.getElementById('regDiscord').value.trim();
 
     if (!fullName || !district || !passport || !age || !discord) {
-        await alert('Заполните все поля!');
+        alert('Заполните все поля!');
         return;
     }
 
@@ -1020,17 +973,15 @@ registerForm.addEventListener('submit', async function(e) {
             age,
             discord,
             role: 'user',
-            status: 'registered' // не заявка, а просто регистрация
+            status: 'registered'
         });
-        await alert('✅ Регистрация успешна! Теперь войдите в личный кабинет.');
+        alert('✅ Регистрация успешна! Теперь войдите в личный кабинет.');
         closeRegisterModal();
-        // Переключаем на форму входа в личный кабинет
         document.getElementById('profileLoginForm').style.display = 'block';
         document.getElementById('profileContent').style.display = 'none';
-        // Очищаем поля
         registerForm.reset();
     } catch (err) {
-        await alert(err.message);
+        alert(err.message);
     }
 });
 
@@ -1071,12 +1022,11 @@ profileModal.addEventListener('click', function(e) {
     if (e.target === this) closeProfileModal();
 });
 
-// Вход в личный кабинет
 profileLogin.addEventListener('submit', async function(e) {
     e.preventDefault();
     const passport = profileLoginPassport.value.trim();
     if (!passport) {
-        await alert('Введите номер паспорта.');
+        alert('Введите номер паспорта.');
         return;
     }
     const users = await dbFirebase.getUsers();
@@ -1084,9 +1034,9 @@ profileLogin.addEventListener('submit', async function(e) {
     if (user) {
         currentUser = user;
         showProfileContent(user);
-        await alert('✅ Добро пожаловать в личный кабинет!');
+        alert('✅ Добро пожаловать в личный кабинет!');
     } else {
-        await alert('Пользователь с таким паспортом не найден. Зарегистрируйтесь.');
+        alert('Пользователь с таким паспортом не найден. Зарегистрируйтесь.');
     }
 });
 
@@ -1103,7 +1053,6 @@ function showProfileContent(user) {
         <p><strong>Роль:</strong> ${user.role || 'пользователь'}</p>
     `;
 
-    // Заполняем форму редактирования
     document.getElementById('editProfileFullName').value = user.fullName || '';
     document.getElementById('editProfileDistrict').value = user.district || '';
     document.getElementById('editProfileAge').value = user.age || '';
@@ -1114,7 +1063,6 @@ function showProfileContent(user) {
     editProfileToggleBtn.textContent = '✏️ Редактировать профиль';
 }
 
-// Редактирование профиля
 editProfileToggleBtn.addEventListener('click', function() {
     if (isEditingProfile) {
         profileEditForm.style.display = 'none';
@@ -1143,7 +1091,7 @@ editProfileForm.addEventListener('submit', async function(e) {
     const discord = document.getElementById('editProfileDiscord').value.trim();
 
     if (!fullName || !district || !age || !discord) {
-        await alert('Все поля обязательны для заполнения!');
+        alert('Все поля обязательны для заполнения!');
         return;
     }
 
@@ -1152,9 +1100,9 @@ editProfileForm.addEventListener('submit', async function(e) {
         await dbFirebase.updateUser(currentUser.id, updatedData);
         currentUser = { ...currentUser, ...updatedData };
         showProfileContent(currentUser);
-        await alert('✅ Данные профиля обновлены!');
+        alert('✅ Данные профиля обновлены!');
     } catch (error) {
-        await alert('Ошибка при обновлении профиля: ' + error.message);
+        alert('Ошибка при обновлении профиля: ' + error.message);
     }
 });
 
@@ -1202,8 +1150,10 @@ async function restoreState() {
     if (adminLogged) {
         isAdminLoggedIn = true;
         const loginBtn = document.getElementById('loginBtn');
-        loginBtn.textContent = 'Админ-панель';
-        loginBtn.classList.add('logged-in');
+        if (loginBtn) {
+            loginBtn.textContent = 'Админ-панель';
+            loginBtn.classList.add('logged-in');
+        }
     }
 
     const userId = localStorage.getItem('user_id');
@@ -1231,115 +1181,127 @@ function setupEventListeners() {
     const loginForm = document.getElementById('loginForm');
     const adminLogoutBtn = document.getElementById('adminLogoutBtn');
 
-    function openLoginModal() { loginModal.classList.add('open'); }
-    function closeLoginModal() { loginModal.classList.remove('open'); }
-    function openAdminModal() { adminModal.classList.add('open'); }
-    function closeAdminModal() { adminModal.classList.remove('open'); }
+    function openLoginModal() { if (loginModal) loginModal.classList.add('open'); }
+    function closeLoginModal() { if (loginModal) loginModal.classList.remove('open'); }
+    function openAdminModal() { if (adminModal) adminModal.classList.add('open'); }
+    function closeAdminModal() { if (adminModal) adminModal.classList.remove('open'); }
 
-    loginBtn.addEventListener('click', function() {
-        if (isAdminLoggedIn) {
-            openAdminModal();
-            renderApplications();
-            renderAdminMembers();
-            populateElectionsForm();
-            loadVisibilitySettings();
-            loadContentSettings();
-            renderAdminUsers();
-        } else {
-            openLoginModal();
-        }
-    });
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function() {
+            if (isAdminLoggedIn) {
+                openAdminModal();
+                renderApplications();
+                renderAdminMembers();
+                populateElectionsForm();
+                loadVisibilitySettings();
+                loadContentSettings();
+                renderAdminUsers();
+            } else {
+                openLoginModal();
+            }
+        });
+    }
 
-    profileBtn.addEventListener('click', function() {
-        openProfileModal();
-    });
+    if (profileBtn) {
+        profileBtn.addEventListener('click', function() {
+            openProfileModal();
+        });
+    }
 
-    loginModalClose.addEventListener('click', closeLoginModal);
-    adminModalClose.addEventListener('click', closeAdminModal);
-    loginModal.addEventListener('click', function(e) { if (e.target === this) closeLoginModal(); });
-    adminModal.addEventListener('click', function(e) { if (e.target === this) closeAdminModal(); });
+    if (loginModalClose) loginModalClose.addEventListener('click', closeLoginModal);
+    if (adminModalClose) adminModalClose.addEventListener('click', closeAdminModal);
+    if (loginModal) loginModal.addEventListener('click', function(e) { if (e.target === this) closeLoginModal(); });
+    if (adminModal) adminModal.addEventListener('click', function(e) { if (e.target === this) closeAdminModal(); });
 
-    loginForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-        if (username === 'admin' && password === 'admin') {
-            isAdminLoggedIn = true;
-            saveAdminState(true);
-            loginBtn.textContent = 'Админ-панель';
-            loginBtn.classList.add('logged-in');
-            closeLoginModal();
-            openAdminModal();
-            renderApplications();
-            renderAdminMembers();
-            populateElectionsForm();
-            loadVisibilitySettings();
-            loadContentSettings();
-            renderAdminUsers();
-        } else {
-            alert('Неверный логин или пароль!');
-        }
-    });
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            if (username === 'admin' && password === 'admin') {
+                isAdminLoggedIn = true;
+                saveAdminState(true);
+                loginBtn.textContent = 'Админ-панель';
+                loginBtn.classList.add('logged-in');
+                closeLoginModal();
+                openAdminModal();
+                renderApplications();
+                renderAdminMembers();
+                populateElectionsForm();
+                loadVisibilitySettings();
+                loadContentSettings();
+                renderAdminUsers();
+            } else {
+                alert('Неверный логин или пароль!');
+            }
+        });
+    }
 
-    adminLogoutBtn.addEventListener('click', function() {
-        isAdminLoggedIn = false;
-        saveAdminState(false);
-        loginBtn.textContent = 'Вход';
-        loginBtn.classList.remove('logged-in');
-        closeAdminModal();
-    });
+    if (adminLogoutBtn) {
+        adminLogoutBtn.addEventListener('click', function() {
+            isAdminLoggedIn = false;
+            saveAdminState(false);
+            loginBtn.textContent = 'Вход';
+            loginBtn.classList.remove('logged-in');
+            closeAdminModal();
+        });
+    }
 
     // ----- ADMIN FORMS (новости, члены) -----
     const addNewsForm = document.getElementById('addNewsForm');
     const addMemberForm = document.getElementById('addMemberForm');
 
-    addNewsForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const title = document.getElementById('newsTitle').value;
-        const date = document.getElementById('newsDate').value;
-        const text = document.getElementById('newsText').value;
-        if (title && date && text) {
-            await dbFirebase.addNews({ title, date, text });
-            addNewsForm.reset();
-            await renderNews();
-        } else {
-            await alert('Заполните все поля!');
-        }
-    });
+    if (addNewsForm) {
+        addNewsForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const title = document.getElementById('newsTitle').value;
+            const date = document.getElementById('newsDate').value;
+            const text = document.getElementById('newsText').value;
+            if (title && date && text) {
+                await dbFirebase.addNews({ title, date, text });
+                addNewsForm.reset();
+                await renderNews();
+            } else {
+                alert('Заполните все поля!');
+            }
+        });
+    }
 
-    addMemberForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const name = document.getElementById('memberName').value.trim();
-        const position = document.getElementById('memberPosition').value.trim();
-        const fileInput = document.getElementById('memberPhoto');
-        const role = document.getElementById('memberRole').value;
+    if (addMemberForm) {
+        addMemberForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('memberName').value.trim();
+            const position = document.getElementById('memberPosition').value.trim();
+            const fileInput = document.getElementById('memberPhoto');
+            const role = document.getElementById('memberRole').value;
 
-        if (!name || !position) {
-            await alert('Введите ФИО и должность!');
-            return;
-        }
-
-        let photoData = '';
-        if (fileInput.files && fileInput.files[0]) {
-            const file = fileInput.files[0];
-            if (!file.type.startsWith('image/')) {
-                await alert('Пожалуйста, выберите файл изображения.');
+            if (!name || !position) {
+                alert('Введите ФИО и должность!');
                 return;
             }
-            photoData = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(e.target.error);
-                reader.readAsDataURL(file);
-            });
-        }
 
-        await dbFirebase.addMember({ name, position, photo: photoData, role });
-        await renderAdminMembers();
-        await renderComposition();
-        addMemberForm.reset();
-        fileInput.value = '';
-    });
+            let photoData = '';
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                if (!file.type.startsWith('image/')) {
+                    alert('Пожалуйста, выберите файл изображения.');
+                    return;
+                }
+                photoData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = (e) => reject(e.target.error);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            await dbFirebase.addMember({ name, position, photo: photoData, role });
+            await renderAdminMembers();
+            await renderComposition();
+            addMemberForm.reset();
+            fileInput.value = '';
+        });
+    }
 
     // ----- NAVIGATION -----
     const navLinks = document.querySelectorAll('.nav-links a');
@@ -1372,7 +1334,9 @@ function setupEventListeners() {
             }
         }
 
-        Object.values(pageSections).forEach(el => el.classList.remove('active'));
+        Object.values(pageSections).forEach(el => {
+            if (el) el.classList.remove('active');
+        });
         const target = pageSections[pageId];
         if (target) target.classList.add('active');
         navLinks.forEach(link => {
@@ -1405,43 +1369,46 @@ function setupEventListeners() {
     });
 
     // ----- JOIN FORM -----
-    document.getElementById('joinForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const fullName = document.getElementById('joinFullName').value.trim();
-        const icAge = parseInt(document.getElementById('joinIcAge').value);
-        const oocAge = parseInt(document.getElementById('joinOocAge').value);
-        const passport = document.getElementById('joinPassport').value.trim();
-        const passportLink = document.getElementById('joinPassportLink').value.trim();
-        const ideology = document.getElementById('joinIdeology').value.trim();
-        const reason = document.getElementById('joinReason').value.trim();
-        const support = document.getElementById('joinSupport').value.trim();
-        const discord = document.getElementById('joinDiscord').value.trim();
+    const joinForm = document.getElementById('joinForm');
+    if (joinForm) {
+        joinForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('joinFullName').value.trim();
+            const icAge = parseInt(document.getElementById('joinIcAge').value);
+            const oocAge = parseInt(document.getElementById('joinOocAge').value);
+            const passport = document.getElementById('joinPassport').value.trim();
+            const passportLink = document.getElementById('joinPassportLink').value.trim();
+            const ideology = document.getElementById('joinIdeology').value.trim();
+            const reason = document.getElementById('joinReason').value.trim();
+            const support = document.getElementById('joinSupport').value.trim();
+            const discord = document.getElementById('joinDiscord').value.trim();
 
-        if (!fullName || !icAge || !oocAge || !passport || !ideology || !reason || !support || !discord) {
-            await alert('Заполните все обязательные поля!');
-            return;
-        }
+            if (!fullName || !icAge || !oocAge || !passport || !ideology || !reason || !support || !discord) {
+                alert('Заполните все обязательные поля!');
+                return;
+            }
 
-        try {
-            await dbFirebase.addUser({
-                fullName,
-                icAge,
-                oocAge,
-                passport,
-                passportLink,
-                ideology,
-                reason,
-                support,
-                discord,
-                status: 'pending' // заявка
-            });
-            await alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
-            this.reset();
-            if (isAdminLoggedIn) await renderApplications();
-        } catch (error) {
-            await alert(error.message);
-        }
-    });
+            try {
+                await dbFirebase.addUser({
+                    fullName,
+                    icAge,
+                    oocAge,
+                    passport,
+                    passportLink,
+                    ideology,
+                    reason,
+                    support,
+                    discord,
+                    status: 'pending'
+                });
+                alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
+                joinForm.reset();
+                if (isAdminLoggedIn) await renderApplications();
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    }
 
     // ----- ADMIN TABS -----
     document.querySelectorAll('.admin-tabs button').forEach(tab => {
@@ -1450,7 +1417,8 @@ function setupEventListeners() {
             this.classList.add('active');
             const tabName = this.getAttribute('data-tab');
             document.querySelectorAll('.admin-panel-section').forEach(s => s.classList.remove('active'));
-            document.getElementById('adminTab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+            const target = document.getElementById('adminTab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+            if (target) target.classList.add('active');
             if (tabName === 'applications') renderApplications();
             if (tabName === 'members') renderAdminMembers();
             if (tabName === 'elections') populateElectionsForm();
@@ -1460,6 +1428,7 @@ function setupEventListeners() {
         });
     });
 
+    // Устанавливаем активную страницу по умолчанию
     const currentActive = document.querySelector('.nav-links a.active');
     if (!currentActive) {
         const homeLink = document.querySelector('.nav-links a[data-page="home"]');
@@ -1486,10 +1455,12 @@ document.addEventListener('DOMContentLoaded', function() {
             await renderSymbolsPage();
             await renderAdminUsers();
             const members = await dbFirebase.getMembers();
-            document.getElementById('totalMembers').textContent = members.length;
+            const totalMembers = document.getElementById('totalMembers');
+            if (totalMembers) totalMembers.textContent = members.length;
             await applyBackground();
         } catch (e) {
             console.error('Ошибка инициализации:', e);
+            alert('Не удалось загрузить данные. Проверьте консоль.');
         }
     })();
 });
