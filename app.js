@@ -66,6 +66,37 @@ async function loadUsers() {
 }
 
 // ============================================================
+// ТЕХНИЧЕСКИЕ РАБОТЫ
+// ============================================================
+async function checkMaintenance() {
+    const settings = await loadData('settings');
+    if (settings && settings.maintenance && settings.maintenance.enabled) {
+        const overlay = document.getElementById('maintenanceOverlay');
+        const message = document.getElementById('maintenanceMessage');
+        if (message && settings.maintenance.message) {
+            message.textContent = settings.maintenance.message;
+        }
+        if (overlay) {
+            overlay.style.display = 'flex';
+            // Скрываем контент сайта
+            document.querySelector('.header').style.display = 'none';
+            document.querySelector('main').style.display = 'none';
+            document.querySelector('.footer').style.display = 'none';
+            return true;
+        }
+    }
+    return false;
+}
+
+async function loadMaintenanceSettings() {
+    const settings = await loadData('settings');
+    if (settings && settings.maintenance) {
+        document.getElementById('maintenanceEnabled').checked = settings.maintenance.enabled || false;
+        document.getElementById('maintenanceMessageInput').value = settings.maintenance.message || '';
+    }
+}
+
+// ============================================================
 // РЕНДЕР КОМПОНЕНТОВ
 // ============================================================
 async function renderNews() {
@@ -434,6 +465,14 @@ function applyContent(content) {
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 async function initApp() {
+    // Проверяем тех. работы – если включены, показываем заглушку и выходим
+    const isMaintenance = await checkMaintenance();
+    if (isMaintenance) {
+        // Админ-панель всё равно должна открываться через кнопку "Вход"
+        // Поэтому не блокируем полностью, но скрываем контент
+        return;
+    }
+
     await renderNews();
     await renderComposition();
     await renderApplications();
@@ -481,23 +520,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ----- КНОПКА "ВХОД" (админ) -----
     document.getElementById('loginBtn').addEventListener('click', function() {
-        if (localStorage.getItem('admin_logged_in') === 'true') {
-            openModal('adminModal');
-            // Обновляем данные в админке
-            renderApplications();
-            renderAdminMembers();
-            renderAdminUsers();
-            loadVisibilitySettings();
-            loadContentSettings();
-        } else {
-            openModal('loginModal');
-        }
+        // Проверяем, есть ли тех. работы – если есть, всё равно открываем админку
+        openModal('adminModal');
+        // Обновляем данные в админке
+        renderApplications();
+        renderAdminMembers();
+        renderAdminUsers();
+        loadVisibilitySettings();
+        loadContentSettings();
+        loadMaintenanceSettings();
     });
 
     // ----- КНОПКА "ЛИЧНЫЙ КАБИНЕТ" -----
     document.getElementById('profileBtn').addEventListener('click', function() {
+        // Если тех. работы включены – блокируем вход в личный кабинет
+        const isMaintenance = document.getElementById('maintenanceOverlay').style.display === 'flex';
+        if (isMaintenance) {
+            alert('Сайт находится на технических работах. Личный кабинет временно недоступен.');
+            return;
+        }
         openModal('profileModal');
-        // Проверяем, есть ли сохранённый пользователь
         const userId = localStorage.getItem('user_id');
         if (userId) {
             loadUsers().then(users => {
@@ -545,6 +587,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderAdminUsers();
             loadVisibilitySettings();
             loadContentSettings();
+            loadMaintenanceSettings();
         } else {
             alert('Неверный логин или пароль!');
         }
@@ -845,6 +888,19 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('✅ Контент обновлён!');
     });
 
+    // ----- СОХРАНЕНИЕ ТЕХ. РАБОТ -----
+    document.getElementById('maintenanceForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const enabled = document.getElementById('maintenanceEnabled').checked;
+        const message = document.getElementById('maintenanceMessageInput').value.trim();
+        const settings = await loadData('settings') || {};
+        settings.maintenance = { enabled, message };
+        await database.ref('settings').set(settings);
+        alert('✅ Настройки тех. работ сохранены!');
+        // Перезагружаем страницу, чтобы применить изменения
+        location.reload();
+    });
+
     // ----- ВЫБОРЫ: ДОБАВЛЕНИЕ ПАРТИИ -----
     document.getElementById('addPartyBtn').addEventListener('click', function() {
         const container = document.getElementById('partiesContainer');
@@ -973,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (tabName === 'settings') await loadVisibilitySettings();
             if (tabName === 'content') await loadContentSettings();
+            if (tabName === 'maintenance') await loadMaintenanceSettings();
         });
     });
 
