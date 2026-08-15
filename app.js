@@ -12,9 +12,6 @@ const firebaseConfig = {
     measurementId: "G-5H68M6P64D"
 };
 
-// ============================================================
-// INIT FIREBASE
-// ============================================================
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
@@ -471,11 +468,9 @@ async function initApp() {
     await loadVisibilitySettings();
     await loadContentSettings();
 
-    // Обновить счётчик сторонников
     const members = await loadMembers();
     document.getElementById('totalMembers').textContent = members.length;
 
-    // Восстановить состояние админа и пользователя из localStorage
     const adminLogged = localStorage.getItem('admin_logged_in') === 'true';
     if (adminLogged) {
         isAdminLoggedIn = true;
@@ -502,6 +497,8 @@ async function initApp() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
 
+    console.log('DOM загружен, навешиваем обработчики...');
+
     // ----- НАВИГАЦИЯ -----
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.addEventListener('click', function(e) {
@@ -522,61 +519,86 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ----- КНОПКА "ВХОД" (админ) -----
-    document.getElementById('loginBtn').addEventListener('click', function() {
-        if (isAdminLoggedIn) {
-            openModal('adminModal');
-            // Обновляем данные в админке
-            renderApplications();
-            renderAdminMembers();
-            renderAdminUsers();
-            loadVisibilitySettings();
-            loadContentSettings();
-        } else {
-            openModal('loginModal');
-        }
-    });
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function() {
+            console.log('Кнопка "Вход" нажата, isAdminLoggedIn =', isAdminLoggedIn);
+            if (isAdminLoggedIn) {
+                openModal('adminModal');
+                // Обновляем данные в админке
+                renderApplications();
+                renderAdminMembers();
+                renderAdminUsers();
+                loadVisibilitySettings();
+                loadContentSettings();
+            } else {
+                openModal('loginModal');
+            }
+        });
+    } else {
+        console.warn('Кнопка loginBtn не найдена!');
+    }
 
     // ----- КНОПКА "ЛИЧНЫЙ КАБИНЕТ" -----
-    document.getElementById('profileBtn').addEventListener('click', function() {
-        openModal('profileModal');
-        if (currentUser) {
-            showProfileContent(currentUser);
-        } else {
-            document.getElementById('profileLoginForm').style.display = 'block';
-            document.getElementById('profileContent').style.display = 'none';
-        }
-    });
+    const profileBtn = document.getElementById('profileBtn');
+    if (profileBtn) {
+        profileBtn.addEventListener('click', function() {
+            console.log('Кнопка "Личный кабинет" нажата');
+            openModal('profileModal');
+            if (currentUser) {
+                showProfileContent(currentUser);
+            } else {
+                document.getElementById('profileLoginForm').style.display = 'block';
+                document.getElementById('profileContent').style.display = 'none';
+            }
+        });
+    } else {
+        console.warn('Кнопка profileBtn не найдена!');
+    }
 
     // ----- ЛОГИН АДМИНА -----
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-        if (username === 'admin' && password === 'admin') {
-            isAdminLoggedIn = true;
-            localStorage.setItem('admin_logged_in', 'true');
-            document.getElementById('loginBtn').textContent = 'Админ-панель';
-            document.getElementById('loginBtn').classList.add('logged-in');
-            closeModal('loginModal');
-            openModal('adminModal');
-            renderApplications();
-            renderAdminMembers();
-            renderAdminUsers();
-            loadVisibilitySettings();
-            loadContentSettings();
-        } else {
-            alert('Неверный логин или пароль!');
-        }
-    });
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            console.log('Попытка входа админа:', username);
+            if (username === 'admin' && password === 'admin') {
+                isAdminLoggedIn = true;
+                localStorage.setItem('admin_logged_in', 'true');
+                document.getElementById('loginBtn').textContent = 'Админ-панель';
+                document.getElementById('loginBtn').classList.add('logged-in');
+                closeModal('loginModal');
+                openModal('adminModal');
+                renderApplications();
+                renderAdminMembers();
+                renderAdminUsers();
+                loadVisibilitySettings();
+                loadContentSettings();
+                console.log('Админ вошёл');
+            } else {
+                alert('Неверный логин или пароль!');
+            }
+        });
+    } else {
+        console.warn('Форма loginForm не найдена!');
+    }
 
     // ----- ВЫХОД ИЗ АДМИНКИ -----
-    document.getElementById('adminLogoutBtn').addEventListener('click', function() {
-        isAdminLoggedIn = false;
-        localStorage.removeItem('admin_logged_in');
-        document.getElementById('loginBtn').textContent = 'Вход';
-        document.getElementById('loginBtn').classList.remove('logged-in');
-        closeModal('adminModal');
-    });
+    const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+    if (adminLogoutBtn) {
+        adminLogoutBtn.addEventListener('click', function() {
+            console.log('Выход из админки');
+            isAdminLoggedIn = false;
+            localStorage.removeItem('admin_logged_in');
+            document.getElementById('loginBtn').textContent = 'Вход';
+            document.getElementById('loginBtn').classList.remove('logged-in');
+            closeModal('adminModal');
+        });
+    } else {
+        console.warn('Кнопка adminLogoutBtn не найдена!');
+    }
 
     // ----- ЗАКРЫТИЕ МОДАЛОК -----
     document.querySelectorAll('.modal-close').forEach(btn => {
@@ -595,84 +617,99 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ----- РЕГИСТРАЦИЯ (личный кабинет) -----
-    document.getElementById('registerForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const fullName = document.getElementById('regFullName').value.trim();
-        const district = document.getElementById('regDistrict').value.trim();
-        const passport = document.getElementById('regPassport').value.trim();
-        const age = parseInt(document.getElementById('regAge').value);
-        const discord = document.getElementById('regDiscord').value.trim();
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('regFullName').value.trim();
+            const district = document.getElementById('regDistrict').value.trim();
+            const passport = document.getElementById('regPassport').value.trim();
+            const age = parseInt(document.getElementById('regAge').value);
+            const discord = document.getElementById('regDiscord').value.trim();
 
-        if (!fullName || !district || !passport || !age || !discord) {
-            alert('Заполните все поля!');
-            return;
-        }
+            if (!fullName || !district || !passport || !age || !discord) {
+                alert('Заполните все поля!');
+                return;
+            }
 
-        const users = await loadUsers();
-        if (users.some(u => u.passport === passport)) {
-            alert('Пользователь с таким паспортом уже зарегистрирован.');
-            return;
-        }
+            const users = await loadUsers();
+            if (users.some(u => u.passport === passport)) {
+                alert('Пользователь с таким паспортом уже зарегистрирован.');
+                return;
+            }
 
-        const newUser = {
-            fullName,
-            district,
-            passport,
-            age,
-            discord,
-            role: 'user',
-            status: 'registered'
-        };
-        await database.ref('users').push(newUser);
-        alert('✅ Регистрация успешна! Теперь войдите в личный кабинет.');
-        closeModal('registerModal');
-        document.getElementById('profileLoginForm').style.display = 'block';
-        document.getElementById('profileContent').style.display = 'none';
-        this.reset();
-    });
+            const newUser = {
+                fullName,
+                district,
+                passport,
+                age,
+                discord,
+                role: 'user',
+                status: 'registered'
+            };
+            await database.ref('users').push(newUser);
+            alert('✅ Регистрация успешна! Теперь войдите в личный кабинет.');
+            closeModal('registerModal');
+            document.getElementById('profileLoginForm').style.display = 'block';
+            document.getElementById('profileContent').style.display = 'none';
+            this.reset();
+        });
+    }
 
     // ----- ПЕРЕКЛЮЧЕНИЕ МЕЖДУ ВХОДОМ И РЕГИСТРАЦИЕЙ -----
-    document.getElementById('switchToRegister').addEventListener('click', function(e) {
-        e.preventDefault();
-        closeModal('profileModal');
-        openModal('registerModal');
-    });
+    const switchToRegister = document.getElementById('switchToRegister');
+    if (switchToRegister) {
+        switchToRegister.addEventListener('click', function(e) {
+            e.preventDefault();
+            closeModal('profileModal');
+            openModal('registerModal');
+        });
+    }
 
-    document.getElementById('switchToLogin').addEventListener('click', function(e) {
-        e.preventDefault();
-        closeModal('registerModal');
-        openModal('profileModal');
-    });
+    const switchToLogin = document.getElementById('switchToLogin');
+    if (switchToLogin) {
+        switchToLogin.addEventListener('click', function(e) {
+            e.preventDefault();
+            closeModal('registerModal');
+            openModal('profileModal');
+        });
+    }
 
     // ----- ВХОД В ЛИЧНЫЙ КАБИНЕТ -----
-    document.getElementById('profileLogin').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const passport = document.getElementById('profileLoginPassport').value.trim();
-        if (!passport) {
-            alert('Введите номер паспорта.');
-            return;
-        }
-        const users = await loadUsers();
-        const user = users.find(u => u.passport === passport && u.status === 'registered');
-        if (user) {
-            currentUser = user;
-            localStorage.setItem('user_id', user.id);
-            showProfileContent(user);
-            alert('✅ Добро пожаловать в личный кабинет!');
-        } else {
-            alert('Пользователь с таким паспортом не найден. Зарегистрируйтесь.');
-        }
-    });
+    const profileLogin = document.getElementById('profileLogin');
+    if (profileLogin) {
+        profileLogin.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const passport = document.getElementById('profileLoginPassport').value.trim();
+            if (!passport) {
+                alert('Введите номер паспорта.');
+                return;
+            }
+            const users = await loadUsers();
+            const user = users.find(u => u.passport === passport && u.status === 'registered');
+            if (user) {
+                currentUser = user;
+                localStorage.setItem('user_id', user.id);
+                showProfileContent(user);
+                alert('✅ Добро пожаловать в личный кабинет!');
+            } else {
+                alert('Пользователь с таким паспортом не найден. Зарегистрируйтесь.');
+            }
+        });
+    }
 
     // ----- ВЫХОД ИЗ ЛИЧНОГО КАБИНЕТА -----
-    document.getElementById('profileLogoutBtn').addEventListener('click', function() {
-        currentUser = null;
-        localStorage.removeItem('user_id');
-        document.getElementById('profileLoginForm').style.display = 'block';
-        document.getElementById('profileContent').style.display = 'none';
-        document.getElementById('profileLoginPassport').value = '';
-        closeModal('profileModal');
-    });
+    const profileLogoutBtn = document.getElementById('profileLogoutBtn');
+    if (profileLogoutBtn) {
+        profileLogoutBtn.addEventListener('click', function() {
+            currentUser = null;
+            localStorage.removeItem('user_id');
+            document.getElementById('profileLoginForm').style.display = 'block';
+            document.getElementById('profileContent').style.display = 'none';
+            document.getElementById('profileLoginPassport').value = '';
+            closeModal('profileModal');
+        });
+    }
 
     // ----- ПОКАЗ ПРОФИЛЯ -----
     function showProfileContent(user) {
@@ -688,7 +725,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <p><strong>Роль:</strong> ${user.role || 'пользователь'}</p>
         `;
 
-        // Заполняем форму редактирования
         document.getElementById('editProfileFullName').value = user.fullName || '';
         document.getElementById('editProfileDistrict').value = user.district || '';
         document.getElementById('editProfileAge').value = user.age || '';
@@ -696,305 +732,346 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ----- РЕДАКТИРОВАНИЕ ПРОФИЛЯ -----
-    document.getElementById('editProfileToggleBtn').addEventListener('click', function() {
-        const form = document.getElementById('profileEditForm');
-        if (form.style.display === 'none') {
-            form.style.display = 'block';
-            this.textContent = '❌ Отменить редактирование';
-        } else {
-            form.style.display = 'none';
-            this.textContent = '✏️ Редактировать профиль';
-        }
-    });
+    const editProfileToggleBtn = document.getElementById('editProfileToggleBtn');
+    if (editProfileToggleBtn) {
+        editProfileToggleBtn.addEventListener('click', function() {
+            const form = document.getElementById('profileEditForm');
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                this.textContent = '❌ Отменить редактирование';
+            } else {
+                form.style.display = 'none';
+                this.textContent = '✏️ Редактировать профиль';
+            }
+        });
+    }
 
-    document.getElementById('cancelEditProfileBtn').addEventListener('click', function() {
-        document.getElementById('profileEditForm').style.display = 'none';
-        document.getElementById('editProfileToggleBtn').textContent = '✏️ Редактировать профиль';
-    });
+    const cancelEditProfileBtn = document.getElementById('cancelEditProfileBtn');
+    if (cancelEditProfileBtn) {
+        cancelEditProfileBtn.addEventListener('click', function() {
+            document.getElementById('profileEditForm').style.display = 'none';
+            document.getElementById('editProfileToggleBtn').textContent = '✏️ Редактировать профиль';
+        });
+    }
 
-    document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        if (!currentUser) return;
+    const editProfileForm = document.getElementById('editProfileForm');
+    if (editProfileForm) {
+        editProfileForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!currentUser) return;
 
-        const fullName = document.getElementById('editProfileFullName').value.trim();
-        const district = document.getElementById('editProfileDistrict').value.trim();
-        const age = parseInt(document.getElementById('editProfileAge').value);
-        const discord = document.getElementById('editProfileDiscord').value.trim();
+            const fullName = document.getElementById('editProfileFullName').value.trim();
+            const district = document.getElementById('editProfileDistrict').value.trim();
+            const age = parseInt(document.getElementById('editProfileAge').value);
+            const discord = document.getElementById('editProfileDiscord').value.trim();
 
-        if (!fullName || !district || !age || !discord) {
-            alert('Все поля обязательны для заполнения!');
-            return;
-        }
+            if (!fullName || !district || !age || !discord) {
+                alert('Все поля обязательны для заполнения!');
+                return;
+            }
 
-        const updatedData = { fullName, district, age, discord };
-        await database.ref(`users/${currentUser.id}`).update(updatedData);
-        currentUser = { ...currentUser, ...updatedData };
-        showProfileContent(currentUser);
-        document.getElementById('profileEditForm').style.display = 'none';
-        document.getElementById('editProfileToggleBtn').textContent = '✏️ Редактировать профиль';
-        alert('✅ Данные профиля обновлены!');
-    });
+            const updatedData = { fullName, district, age, discord };
+            await database.ref(`users/${currentUser.id}`).update(updatedData);
+            currentUser = { ...currentUser, ...updatedData };
+            showProfileContent(currentUser);
+            document.getElementById('profileEditForm').style.display = 'none';
+            document.getElementById('editProfileToggleBtn').textContent = '✏️ Редактировать профиль';
+            alert('✅ Данные профиля обновлены!');
+        });
+    }
 
     // ----- ЗАЯВКА НА ВСТУПЛЕНИЕ -----
-    document.getElementById('joinForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const fullName = document.getElementById('joinFullName').value.trim();
-        const icAge = parseInt(document.getElementById('joinIcAge').value);
-        const oocAge = parseInt(document.getElementById('joinOocAge').value);
-        const passport = document.getElementById('joinPassport').value.trim();
-        const passportLink = document.getElementById('joinPassportLink').value.trim();
-        const ideology = document.getElementById('joinIdeology').value.trim();
-        const reason = document.getElementById('joinReason').value.trim();
-        const support = document.getElementById('joinSupport').value.trim();
-        const discord = document.getElementById('joinDiscord').value.trim();
+    const joinForm = document.getElementById('joinForm');
+    if (joinForm) {
+        joinForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('joinFullName').value.trim();
+            const icAge = parseInt(document.getElementById('joinIcAge').value);
+            const oocAge = parseInt(document.getElementById('joinOocAge').value);
+            const passport = document.getElementById('joinPassport').value.trim();
+            const passportLink = document.getElementById('joinPassportLink').value.trim();
+            const ideology = document.getElementById('joinIdeology').value.trim();
+            const reason = document.getElementById('joinReason').value.trim();
+            const support = document.getElementById('joinSupport').value.trim();
+            const discord = document.getElementById('joinDiscord').value.trim();
 
-        if (!fullName || !icAge || !oocAge || !passport || !ideology || !reason || !support || !discord) {
-            alert('Заполните все обязательные поля!');
-            return;
-        }
+            if (!fullName || !icAge || !oocAge || !passport || !ideology || !reason || !support || !discord) {
+                alert('Заполните все обязательные поля!');
+                return;
+            }
 
-        const users = await loadUsers();
-        if (users.some(u => u.passport === passport || u.fullName === fullName)) {
-            alert('Пользователь с таким ФИО или паспортом уже подавал заявку.');
-            return;
-        }
+            const users = await loadUsers();
+            if (users.some(u => u.passport === passport || u.fullName === fullName)) {
+                alert('Пользователь с таким ФИО или паспортом уже подавал заявку.');
+                return;
+            }
 
-        await database.ref('users').push({
-            fullName,
-            icAge,
-            oocAge,
-            passport,
-            passportLink,
-            ideology,
-            reason,
-            support,
-            discord,
-            status: 'pending'
+            await database.ref('users').push({
+                fullName,
+                icAge,
+                oocAge,
+                passport,
+                passportLink,
+                ideology,
+                reason,
+                support,
+                discord,
+                status: 'pending'
+            });
+            alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
+            this.reset();
+            if (isAdminLoggedIn) await renderApplications();
         });
-        alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
-        this.reset();
-        if (isAdminLoggedIn) await renderApplications();
-    });
+    }
 
     // ----- ДОБАВЛЕНИЕ НОВОСТИ -----
-    document.getElementById('addNewsForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const title = document.getElementById('newsTitle').value;
-        const date = document.getElementById('newsDate').value;
-        const text = document.getElementById('newsText').value;
-        if (title && date && text) {
-            await database.ref('news').push({ title, date, text });
-            this.reset();
-            await renderNews();
-        } else {
-            alert('Заполните все поля!');
-        }
-    });
+    const addNewsForm = document.getElementById('addNewsForm');
+    if (addNewsForm) {
+        addNewsForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const title = document.getElementById('newsTitle').value;
+            const date = document.getElementById('newsDate').value;
+            const text = document.getElementById('newsText').value;
+            if (title && date && text) {
+                await database.ref('news').push({ title, date, text });
+                this.reset();
+                await renderNews();
+            } else {
+                alert('Заполните все поля!');
+            }
+        });
+    }
 
     // ----- ДОБАВЛЕНИЕ ЧЛЕНА В СОСТАВ -----
-    document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const name = document.getElementById('memberName').value.trim();
-        const position = document.getElementById('memberPosition').value.trim();
-        const fileInput = document.getElementById('memberPhoto');
-        const role = document.getElementById('memberRole').value;
+    const addMemberForm = document.getElementById('addMemberForm');
+    if (addMemberForm) {
+        addMemberForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('memberName').value.trim();
+            const position = document.getElementById('memberPosition').value.trim();
+            const fileInput = document.getElementById('memberPhoto');
+            const role = document.getElementById('memberRole').value;
 
-        if (!name || !position) {
-            alert('Введите ФИО и должность!');
-            return;
-        }
+            if (!name || !position) {
+                alert('Введите ФИО и должность!');
+                return;
+            }
 
-        let photoData = '';
-        if (fileInput.files && fileInput.files[0]) {
+            let photoData = '';
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                if (!file.type.startsWith('image/')) {
+                    alert('Пожалуйста, выберите файл изображения.');
+                    return;
+                }
+                photoData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            await database.ref('members').push({ name, position, photo: photoData, role });
+            await renderAdminMembers();
+            await renderComposition();
+            this.reset();
+            fileInput.value = '';
+        });
+    }
+
+    // ----- ДОБАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ (админ) -----
+    const addUserForm = document.getElementById('addUserForm');
+    if (addUserForm) {
+        addUserForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('adminUserName').value.trim();
+            const passport = document.getElementById('adminUserPassport').value.trim();
+            const role = document.getElementById('adminUserRole').value;
+
+            if (!fullName || !passport) {
+                alert('Заполните все поля!');
+                return;
+            }
+
+            const users = await loadUsers();
+            if (users.some(u => u.passport === passport)) {
+                alert('Пользователь с таким паспортом уже существует.');
+                return;
+            }
+
+            await database.ref('users').push({ fullName, passport, role, status: 'registered' });
+            await renderAdminUsers();
+            this.reset();
+            alert('✅ Пользователь добавлен!');
+        });
+    }
+
+    // ----- ОЧИСТКА РАССМОТРЕННЫХ ЗАЯВОК -----
+    const clearProcessedBtn = document.getElementById('clearProcessedBtn');
+    if (clearProcessedBtn) {
+        clearProcessedBtn.addEventListener('click', async function() {
+            if (!confirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
+            const users = await loadUsers();
+            const processed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
+            if (processed.length === 0) {
+                alert('Нет рассмотренных заявок для удаления.');
+                return;
+            }
+            for (const user of processed) {
+                await database.ref(`users/${user.id}`).remove();
+            }
+            await renderApplications();
+            alert(`Удалено ${processed.length} заявок.`);
+        });
+    }
+
+    // ----- СОХРАНЕНИЕ НАСТРОЕК ВИДИМОСТИ -----
+    const settingsForm = document.getElementById('settingsForm');
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const newSettings = {
+                showElections: document.getElementById('showElections').checked,
+                showComposition: document.getElementById('showComposition').checked,
+                showPress: document.getElementById('showPress').checked,
+                showSymbols: document.getElementById('showSymbols').checked,
+                showAbout: document.getElementById('showAbout').checked,
+                showJoin: document.getElementById('showJoin').checked,
+                showHistory: document.getElementById('showHistory').checked,
+                showDocs: document.getElementById('showDocs').checked
+            };
+            const settings = await loadSettings() || {};
+            settings.visibility = newSettings;
+            await database.ref('settings').set(settings);
+            applyVisibility(newSettings);
+            alert('✅ Настройки сохранены!');
+        });
+    }
+
+    // ----- СОХРАНЕНИЕ КОНТЕНТА -----
+    const contentForm = document.getElementById('contentForm');
+    if (contentForm) {
+        contentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const newContent = {
+                heroTitle: document.getElementById('heroTitleInput').value,
+                heroSubtitle: document.getElementById('heroSubtitleInput').value,
+                missionText: document.getElementById('missionTextInput').value
+            };
+            const settings = await loadSettings() || {};
+            settings.content = newContent;
+            await database.ref('settings').set(settings);
+            applyContent(newContent);
+            alert('✅ Контент обновлён!');
+        });
+    }
+
+    // ----- ВЫБОРЫ: ДОБАВЛЕНИЕ ПАРТИИ -----
+    const addPartyBtn = document.getElementById('addPartyBtn');
+    if (addPartyBtn) {
+        addPartyBtn.addEventListener('click', function() {
+            const container = document.getElementById('partiesContainer');
+            const div = document.createElement('div');
+            div.className = 'party-field';
+            div.style.display = 'flex';
+            div.style.gap = '10px';
+            div.style.marginBottom = '10px';
+            div.style.alignItems = 'center';
+            div.innerHTML = `
+                <input type="text" class="party-name" placeholder="Название партии" style="flex:2; padding: 8px 12px; border: 2px solid var(--light-gray); border-radius: var(--radius); font-family: inherit; font-size: 14px;" />
+                <input type="number" class="party-percent" placeholder="%" style="flex:0.5; padding: 8px 12px; border: 2px solid var(--light-gray); border-radius: var(--radius); font-family: inherit; font-size: 14px; width: 80px;" />
+                <button type="button" class="btn btn-danger remove-party-btn" style="padding: 4px 12px; font-size: 14px;">✕</button>
+            `;
+            container.appendChild(div);
+            div.querySelector('.remove-party-btn').addEventListener('click', function() {
+                if (container.children.length > 1) {
+                    container.removeChild(div);
+                } else {
+                    alert('Должна быть хотя бы одна партия.');
+                }
+            });
+        });
+    }
+
+    // ----- СОХРАНЕНИЕ ВЫБОРОВ -----
+    const electionsForm = document.getElementById('electionsForm');
+    if (electionsForm) {
+        electionsForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const date = document.getElementById('electionsDate').value.trim();
+            const time = document.getElementById('electionsTime').value.trim();
+            const footer = document.getElementById('electionsFooter').value.trim();
+            const footerDate = document.getElementById('electionsFooterDate').value.trim();
+
+            const partyFields = document.querySelectorAll('.party-field');
+            const parties = [];
+            partyFields.forEach(field => {
+                const name = field.querySelector('.party-name').value.trim();
+                const percent = parseFloat(field.querySelector('.party-percent').value);
+                if (name && !isNaN(percent)) {
+                    parties.push({ name, percent });
+                }
+            });
+
+            if (parties.length === 0) {
+                alert('Добавьте хотя бы одну партию с корректными данными.');
+                return;
+            }
+
+            await database.ref('elections').set({ parties, date, time, footer, footerDate });
+            await renderElections();
+            alert('✅ Данные о выборах обновлены!');
+        });
+    }
+
+    // ----- ФОН: ПРИМЕНИТЬ -----
+    const applyBgBtn = document.getElementById('applyBgBtn');
+    if (applyBgBtn) {
+        applyBgBtn.addEventListener('click', async function() {
+            const fileInput = document.getElementById('bgImage');
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert('Выберите изображение.');
+                return;
+            }
             const file = fileInput.files[0];
             if (!file.type.startsWith('image/')) {
                 alert('Пожалуйста, выберите файл изображения.');
                 return;
             }
-            photoData = await new Promise((resolve) => {
+            const photoData = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(file);
             });
-        }
-
-        await database.ref('members').push({ name, position, photo: photoData, role });
-        await renderAdminMembers();
-        await renderComposition();
-        this.reset();
-        fileInput.value = '';
-    });
-
-    // ----- ДОБАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ (админ) -----
-    document.getElementById('addUserForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const fullName = document.getElementById('adminUserName').value.trim();
-        const passport = document.getElementById('adminUserPassport').value.trim();
-        const role = document.getElementById('adminUserRole').value;
-
-        if (!fullName || !passport) {
-            alert('Заполните все поля!');
-            return;
-        }
-
-        const users = await loadUsers();
-        if (users.some(u => u.passport === passport)) {
-            alert('Пользователь с таким паспортом уже существует.');
-            return;
-        }
-
-        await database.ref('users').push({ fullName, passport, role, status: 'registered' });
-        await renderAdminUsers();
-        this.reset();
-        alert('✅ Пользователь добавлен!');
-    });
-
-    // ----- ОЧИСТКА РАССМОТРЕННЫХ ЗАЯВОК -----
-    document.getElementById('clearProcessedBtn').addEventListener('click', async function() {
-        if (!confirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
-        const users = await loadUsers();
-        const processed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
-        if (processed.length === 0) {
-            alert('Нет рассмотренных заявок для удаления.');
-            return;
-        }
-        for (const user of processed) {
-            await database.ref(`users/${user.id}`).remove();
-        }
-        await renderApplications();
-        alert(`Удалено ${processed.length} заявок.`);
-    });
-
-    // ----- СОХРАНЕНИЕ НАСТРОЕК ВИДИМОСТИ -----
-    document.getElementById('settingsForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const newSettings = {
-            showElections: document.getElementById('showElections').checked,
-            showComposition: document.getElementById('showComposition').checked,
-            showPress: document.getElementById('showPress').checked,
-            showSymbols: document.getElementById('showSymbols').checked,
-            showAbout: document.getElementById('showAbout').checked,
-            showJoin: document.getElementById('showJoin').checked,
-            showHistory: document.getElementById('showHistory').checked,
-            showDocs: document.getElementById('showDocs').checked
-        };
-        const settings = await loadSettings() || {};
-        settings.visibility = newSettings;
-        await database.ref('settings').set(settings);
-        applyVisibility(newSettings);
-        alert('✅ Настройки сохранены!');
-    });
-
-    // ----- СОХРАНЕНИЕ КОНТЕНТА -----
-    document.getElementById('contentForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const newContent = {
-            heroTitle: document.getElementById('heroTitleInput').value,
-            heroSubtitle: document.getElementById('heroSubtitleInput').value,
-            missionText: document.getElementById('missionTextInput').value
-        };
-        const settings = await loadSettings() || {};
-        settings.content = newContent;
-        await database.ref('settings').set(settings);
-        applyContent(newContent);
-        alert('✅ Контент обновлён!');
-    });
-
-    // ----- ВЫБОРЫ: ДОБАВЛЕНИЕ ПАРТИИ -----
-    document.getElementById('addPartyBtn').addEventListener('click', function() {
-        const container = document.getElementById('partiesContainer');
-        const div = document.createElement('div');
-        div.className = 'party-field';
-        div.style.display = 'flex';
-        div.style.gap = '10px';
-        div.style.marginBottom = '10px';
-        div.style.alignItems = 'center';
-        div.innerHTML = `
-            <input type="text" class="party-name" placeholder="Название партии" style="flex:2; padding: 8px 12px; border: 2px solid var(--light-gray); border-radius: var(--radius); font-family: inherit; font-size: 14px;" />
-            <input type="number" class="party-percent" placeholder="%" style="flex:0.5; padding: 8px 12px; border: 2px solid var(--light-gray); border-radius: var(--radius); font-family: inherit; font-size: 14px; width: 80px;" />
-            <button type="button" class="btn btn-danger remove-party-btn" style="padding: 4px 12px; font-size: 14px;">✕</button>
-        `;
-        container.appendChild(div);
-        div.querySelector('.remove-party-btn').addEventListener('click', function() {
-            if (container.children.length > 1) {
-                container.removeChild(div);
-            } else {
-                alert('Должна быть хотя бы одна партия.');
-            }
+            const settings = await loadSettings() || {};
+            settings.background = photoData;
+            await database.ref('settings').set(settings);
+            document.body.style.backgroundImage = `url(${photoData})`;
+            alert('Фон успешно обновлён!');
+            fileInput.value = '';
         });
-    });
-
-    // ----- СОХРАНЕНИЕ ВЫБОРОВ -----
-    document.getElementById('electionsForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const date = document.getElementById('electionsDate').value.trim();
-        const time = document.getElementById('electionsTime').value.trim();
-        const footer = document.getElementById('electionsFooter').value.trim();
-        const footerDate = document.getElementById('electionsFooterDate').value.trim();
-
-        const partyFields = document.querySelectorAll('.party-field');
-        const parties = [];
-        partyFields.forEach(field => {
-            const name = field.querySelector('.party-name').value.trim();
-            const percent = parseFloat(field.querySelector('.party-percent').value);
-            if (name && !isNaN(percent)) {
-                parties.push({ name, percent });
-            }
-        });
-
-        if (parties.length === 0) {
-            alert('Добавьте хотя бы одну партию с корректными данными.');
-            return;
-        }
-
-        await database.ref('elections').set({ parties, date, time, footer, footerDate });
-        await renderElections();
-        alert('✅ Данные о выборах обновлены!');
-    });
-
-    // ----- ФОН: ПРИМЕНИТЬ -----
-    document.getElementById('applyBgBtn').addEventListener('click', async function() {
-        const fileInput = document.getElementById('bgImage');
-        if (!fileInput.files || !fileInput.files[0]) {
-            alert('Выберите изображение.');
-            return;
-        }
-        const file = fileInput.files[0];
-        if (!file.type.startsWith('image/')) {
-            alert('Пожалуйста, выберите файл изображения.');
-            return;
-        }
-        const photoData = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.readAsDataURL(file);
-        });
-        const settings = await loadSettings() || {};
-        settings.background = photoData;
-        await database.ref('settings').set(settings);
-        document.body.style.backgroundImage = `url(${photoData})`;
-        alert('Фон успешно обновлён!');
-        fileInput.value = '';
-    });
+    }
 
     // ----- ФОН: СБРОСИТЬ -----
-    document.getElementById('resetBgBtn').addEventListener('click', async function() {
-        if (!confirm('Сбросить фоновое изображение?')) return;
-        const settings = await loadSettings() || {};
-        delete settings.background;
-        await database.ref('settings').set(settings);
-        document.body.style.backgroundImage = '';
-        alert('Фон сброшен.');
-    });
+    const resetBgBtn = document.getElementById('resetBgBtn');
+    if (resetBgBtn) {
+        resetBgBtn.addEventListener('click', async function() {
+            if (!confirm('Сбросить фоновое изображение?')) return;
+            const settings = await loadSettings() || {};
+            delete settings.background;
+            await database.ref('settings').set(settings);
+            document.body.style.backgroundImage = '';
+            alert('Фон сброшен.');
+        });
+    }
 
     // ============================================================
     // ЗАПУСК ПРИЛОЖЕНИЯ
     // ============================================================
     initApp();
 
-    // Небольшой костыль для отображения выборов в админке
     // Заполняем поля выборов при открытии вкладки
-    document.querySelector('[data-tab="elections"]').addEventListener('click', async function() {
+    document.querySelector('[data-tab="elections"]')?.addEventListener('click', async function() {
         const elections = await loadElections();
         if (elections) {
             document.getElementById('electionsDate').value = elections.date || '';
@@ -1030,15 +1107,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Заполняем настройки при открытии вкладки
-    document.querySelector('[data-tab="settings"]').addEventListener('click', function() {
+    document.querySelector('[data-tab="settings"]')?.addEventListener('click', function() {
         loadVisibilitySettings();
     });
 
-    document.querySelector('[data-tab="content"]').addEventListener('click', function() {
+    document.querySelector('[data-tab="content"]')?.addEventListener('click', function() {
         loadContentSettings();
     });
 
-    document.querySelector('[data-tab="users"]').addEventListener('click', function() {
+    document.querySelector('[data-tab="users"]')?.addEventListener('click', function() {
         renderAdminUsers();
     });
 
