@@ -1492,4 +1492,5 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Ошибка инициализации:', e);
         }
     })();
+console.log('app.js загружен!');
 });
