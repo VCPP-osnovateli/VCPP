@@ -31,6 +31,8 @@
                 <div class="nav-links" id="mainNav">
                     <a href="#" class="active" data-page="home">Главная</a>
                     <a href="#" data-page="about">О партии</a>
+                    <a href="#" data-page="history">История</a>
+                    <a href="#" data-page="docs">Документы</a>
                     <a href="#" data-page="symbols">Символика</a>
                     <a href="#" data-page="composition">Состав</a>
                     <a href="#" data-page="press">Пресс-служба</a>
@@ -52,10 +54,10 @@
                     ⚡ Данный сайт не является реальным политическим ресурсом и создан исключительно для игрового сервера Рублевка RMRP.
                 </div>
 
-                <div class="hero">
+                <div class="hero" id="heroBlock">
                     <div class="hero-content">
-                        <h1>Построим будущее вместе с <span class="red">«Новой Россией»</span></h1>
-                        <p>Наша программа, история и цели для создания лучшего завтра. Присоединяйтесь к движению на сервере Рублевка RMRP.</p>
+                        <h1 id="heroTitle">Построим будущее вместе с <span class="red">«Новой Россией»</span></h1>
+                        <p id="heroSubtitle">Наша программа, история и цели для создания лучшего завтра. Присоединяйтесь к движению на сервере Рублевка RMRP.</p>
                         <div class="hero-buttons">
                             <a href="#" class="btn btn-primary" data-page="join">Присоединиться</a>
                             <a href="#" class="btn btn-outline" data-page="about">Наша программа</a>
@@ -84,13 +86,12 @@
 
                 <div class="mission-block">
                     <div class="mission-card">
-                        <h3>Наша миссия</h3>
-                        <p>Всероссийская центристская политическая партия «Новая Россия» — это политическая сила, объединяющая граждан, стремящихся к построению свободного, справедливого и процветающего общества.</p>
-                        <p style="margin-top:12px;">Мы верим в силу демократических институтов, верховенство права и свободу личности. Наша цель — создание условий, при которых каждый гражданин сможет реализовать свой потенциал.</p>
+                        <h3 id="missionTitle">Наша миссия</h3>
+                        <p id="missionText">Всероссийская центристская политическая партия «Новая Россия» — это политическая сила, объединяющая граждан, стремящихся к построению свободного, справедливого и процветающего общества. Мы верим в силу демократических институтов, верховенство права и свободу личности. Наша цель — создание условий, при которых каждый гражданин сможет реализовать свой потенциал.</p>
                     </div>
                     <div class="mission-card">
-                        <h3>Основные принципы</h3>
-                        <ul>
+                        <h3 id="principlesTitle">Основные принципы</h3>
+                        <ul id="principlesList">
                             <li>Политика реальных действий и власть достойных</li>
                             <li>Защита традиционных нравственных и духовных ценностей</li>
                             <li>Сохранение исторического и культурного наследия</li>
@@ -120,8 +121,7 @@
                 <div class="mission-block">
                     <div class="mission-card">
                         <h3>Наша миссия</h3>
-                        <p>Всероссийская центристская политическая партия «Новая Россия» — это политическая сила, объединяющая граждан, стремящихся к построению свободного, справедливого и процветающего общества.</p>
-                        <p style="margin-top:12px;">Мы верим в силу демократических институтов, верховенство права и свободу личности. Наша цель — создание условий, при которых каждый гражданин сможет реализовать свой потенциал.</p>
+                        <p>Всероссийская центристская политическая партия «Новая Россия» — это политическая сила, объединяющая граждан, стремящихся к построению свободного, справедливого и процветающего общества. Мы верим в силу демократических институтов, верховенство права и свободу личности. Наша цель — создание условий, при которых каждый гражданин сможет реализовать свой потенциал.</p>
                     </div>
                     <div class="mission-card">
                         <h3>Основные принципы</h3>
@@ -135,17 +135,48 @@
                 </div>
 
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin:24px 0;">
-                    <a href="#" class="btn btn-dark" style="text-align:center;" data-page="about">История партии</a>
+                    <a href="#" class="btn btn-dark" style="text-align:center;" data-page="history">История партии</a>
                     <a href="https://docs.google.com/document/d/1ky5703-hOKOFJkb-BSoYjXGQ40fkx8F9Q1uMKOkkyBs/edit?tab=t.0#heading=h.57io7eu4lf2k" target="_blank" class="btn btn-dark" style="text-align:center;">Программа партии</a>
                     <a href="#" class="btn btn-dark" style="text-align:center;" data-page="about">Предвыборная программа</a>
                     <a href="https://docs.google.com/document/d/1jbB8m4UIQ8ofIA2R3Sq0za4WuRFdfa1_knZNNJmUSaY/edit?tab=t.0" target="_blank" class="btn btn-dark" style="text-align:center;">Устав партии</a>
+                    <a href="#" class="btn btn-dark" style="text-align:center;" data-page="docs">Документы</a>
                     <a href="#" class="btn btn-dark" style="text-align:center;" data-page="symbols">Символика</a>
-                    <a href="#" class="btn btn-dark" style="text-align:center;" data-page="about">Документы</a>
                 </div>
 
                 <div style="background:var(--white); border-radius:var(--radius); padding:24px 28px; box-shadow:var(--shadow);">
                     <h3 style="color:var(--dark-blue); font-size:20px; margin-bottom:8px;">Контакты</h3>
                     <p style="color:#3a4a5e; text-align:justify;">Свяжитесь с нами или оставьте обращение через форму на странице <a href="#" data-page="join" style="color:var(--red); font-weight:600;">вступления</a>.</p>
+                </div>
+            </section>
+
+            <!-- ===== PAGE: HISTORY ===== -->
+            <section class="page-section" id="page-history">
+                <h1 class="section-title">История <span class="red">партии</span></h1>
+                <p class="section-subtitle">Путь становления ВЦПП «Новая Россия».</p>
+                <div class="badge-disclaimer">
+                    ⚡ Данный сайт не является реальным политическим ресурсом и создан исключительно для игрового сервера Рублевка RMRP.
+                </div>
+                <div id="historyContent" style="background:var(--white); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow);">
+                    <p style="font-size:16px; line-height:1.8;">Партия основана в 2024 году группой единомышленников, объединённых идеей построения справедливого и процветающего общества. За короткое время нам удалось привлечь тысячи сторонников и реализовать десятки социальных инициатив. Мы гордимся своей историей и смотрим в будущее с уверенностью.</p>
+                    <p style="margin-top:12px;">Ключевые вехи: создание молодёжного крыла, участие в выборах, разработка народной программы, открытие региональных отделений.</p>
+                </div>
+            </section>
+
+            <!-- ===== PAGE: DOCS ===== -->
+            <section class="page-section" id="page-docs">
+                <h1 class="section-title">Документация <span class="red">партии</span></h1>
+                <p class="section-subtitle">Официальные документы, регламенты и внутренние положения.</p>
+                <div class="badge-disclaimer">
+                    ⚡ Данный сайт не является реальным политическим ресурсом и создан исключительно для игрового сервера Рублевка RMRP.
+                </div>
+                <div style="background:var(--white); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow);">
+                    <ul style="list-style:disc; padding-left:20px;">
+                        <li><a href="https://docs.google.com/document/d/1jbB8m4UIQ8ofIA2R3Sq0za4WuRFdfa1_knZNNJmUSaY/edit?tab=t.0" target="_blank">Устав партии</a></li>
+                        <li><a href="https://docs.google.com/document/d/1ky5703-hOKOFJkb-BSoYjXGQ40fkx8F9Q1uMKOkkyBs/edit?tab=t.0#heading=h.57io7eu4lf2k" target="_blank">Программа партии</a></li>
+                        <li><a href="#" data-page="about">Предвыборная программа</a></li>
+                        <li><a href="#" data-page="about">Регламент работы</a></li>
+                        <li><a href="#" data-page="about">Этический кодекс</a></li>
+                    </ul>
                 </div>
             </section>
 
@@ -202,8 +233,8 @@
 
             <!-- ===== PAGE: JOIN ===== -->
             <section class="page-section" id="page-join">
-                <h1 class="section-title">Вступить в игровую партию</h1>
-                <p class="section-subtitle">Заполните анкету для вступления в ВЦПП «Новая Россия» на сервере Рублевка RMRP.</p>
+                <h1 class="section-title">Вступить в партию</h1>
+                <p class="section-subtitle">Заполните анкету для вступления в ВЦПП «Новая Россия».</p>
 
                 <div class="badge-disclaimer">
                     ⚡ Данный сайт не является реальным политическим ресурсом и создан исключительно для игрового сервера Рублевка RMRP.
@@ -214,12 +245,12 @@
 
                     <form id="joinForm">
                         <div class="form-group">
-                            <label>Ваше игровое ФИО <span class="required">*</span></label>
+                            <label>Ваше полное Фамилия Имя Отчество <span class="required">*</span></label>
                             <input type="text" id="joinFullName" placeholder="Иванов Иван Иванович" required />
                         </div>
 
                         <div class="form-group">
-                            <label>Ваш игровой возраст (IC) <span class="required">*</span></label>
+                            <label>Ваш возраст (IC) <span class="required">*</span></label>
                             <input type="number" id="joinIcAge" placeholder="18" required />
                         </div>
 
@@ -229,20 +260,25 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Номер игрового паспорта <span class="required">*</span></label>
+                            <label>Номер паспорта <span class="required">*</span></label>
                             <input type="text" id="joinPassport" placeholder="Например: 1234567" required />
-                            <div class="hint">Только цифры, максимум 7 цифр.</div>
+                            <div class="hint">Только цифры.</div>
                         </div>
 
                         <div class="form-group">
-                            <label>Копия игрового паспорта (ссылка на скриншот) <span class="required">*</span></label>
-                            <input type="url" id="joinPassportLink" placeholder="https://" required />
-                            <div class="hint">Прямая ссылка (http или https) на скриншот игрового паспорта.</div>
+                            <label>Копия паспорта (ссылка на скриншот)</label>
+                            <input type="text" id="joinPassportLink" placeholder="https:// или любой текст" />
+                            <div class="hint">Необязательное поле.</div>
                         </div>
 
                         <div class="form-group">
-                            <label>Почему вы хотите вступить в «Новую Россию»? <span class="required">*</span></label>
-                            <textarea id="joinMotivation" placeholder="Опишите свои мотивы..." required></textarea>
+                            <label>Какой идеологии вы придерживаетесь? <span class="required">*</span></label>
+                            <input type="text" id="joinIdeology" placeholder="Например: социал-демократия, либерализм, консерватизм..." required />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Почему вы выбрали именно нашу партию? <span class="required">*</span></label>
+                            <textarea id="joinReason" placeholder="Опишите свои мотивы..." required></textarea>
                         </div>
 
                         <div class="form-group">
@@ -259,7 +295,7 @@
                             <div class="form-check">
                                 <input type="checkbox" id="agree" required />
                                 <label for="agree">
-                                    <strong>Вступая в игровую партию, я обязуюсь</strong> поддерживать ценности «ВЦПП «Новая Россия»», активно работать на благо партии на сервере и стремиться к реальным изменениям, не обещая того, чего не могу выполнить. <span class="required">*</span>
+                                    <strong>Вступая в партию, я обязуюсь</strong> поддерживать ценности «ВЦПП «Новая Россия»», активно работать на благо партии и стремиться к реальным изменениям, не обещая того, чего не могу выполнить. <span class="required">*</span>
                                 </label>
                             </div>
                         </div>
@@ -304,6 +340,8 @@
                 <button data-tab="applications">Заявки</button>
                 <button data-tab="members">Управление составом</button>
                 <button data-tab="elections">Выборы</button>
+                <button data-tab="content">Редактирование контента</button>
+                <button data-tab="users">Пользователи</button>
                 <button data-tab="settings">Настройки</button>
             </div>
 
@@ -398,6 +436,56 @@
                 </form>
             </div>
 
+            <!-- Вкладка: Редактирование контента -->
+            <div class="admin-panel-section" id="adminTabContent">
+                <p style="margin-bottom:16px; color:#3a4a5e;">Редактирование текстов на публичных страницах.</p>
+                <form id="contentForm">
+                    <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
+                        <h4>Главная страница</h4>
+                        <div class="form-group">
+                            <label>Заголовок героя</label>
+                            <input type="text" id="heroTitleInput" />
+                        </div>
+                        <div class="form-group">
+                            <label>Подзаголовок героя</label>
+                            <textarea id="heroSubtitleInput" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Текст миссии</label>
+                            <textarea id="missionTextInput" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить контент</button>
+                </form>
+            </div>
+
+            <!-- Вкладка: Пользователи -->
+            <div class="admin-panel-section" id="adminTabUsers">
+                <p style="margin-bottom:16px; color:#3a4a5e;">Управление пользователями (регистрация, роли).</p>
+                <form id="addUserForm">
+                    <div class="form-group">
+                        <label>ФИО <span class="required">*</span></label>
+                        <input type="text" id="adminUserName" placeholder="Иванов Иван Иванович" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Паспорт <span class="required">*</span></label>
+                        <input type="text" id="adminUserPassport" placeholder="1234567" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Роль <span class="required">*</span></label>
+                        <select id="adminUserRole" required>
+                            <option value="admin">Администратор</option>
+                            <option value="editor">Редактор</option>
+                            <option value="viewer">Наблюдатель</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">➕ Добавить пользователя</button>
+                </form>
+                <hr style="margin: 24px 0; border: 0; border-top: 2px solid var(--light-gray);" />
+                <h4 style="font-size:16px; font-weight:700; color:var(--dark-blue); margin-bottom:12px;">Список пользователей</h4>
+                <div id="adminUsersList"></div>
+            </div>
+
             <!-- Вкладка: Настройки -->
             <div class="admin-panel-section" id="adminTabSettings">
                 <p style="margin-bottom:16px; color:#3a4a5e;">Настройка видимости разделов и внешнего вида сайта.</p>
@@ -411,6 +499,8 @@
                             <label><input type="checkbox" id="showSymbols" /> Символика</label>
                             <label><input type="checkbox" id="showAbout" /> О партии</label>
                             <label><input type="checkbox" id="showJoin" /> Вступление</label>
+                            <label><input type="checkbox" id="showHistory" /> История</label>
+                            <label><input type="checkbox" id="showDocs" /> Документы</label>
                         </div>
                     </div>
 
@@ -434,36 +524,35 @@
         </div>
     </div>
 
-    <!-- ===== MODAL: EDIT MEMBER ===== -->
-    <div class="modal-overlay" id="editMemberModal">
+    <!-- ===== MODAL: REGISTER (для личного кабинета) ===== -->
+    <div class="modal-overlay" id="registerModal">
         <div class="modal-box">
-            <button class="modal-close" id="editMemberModalClose">&times;</button>
-            <div class="modal-title">Редактировать члена партии</div>
-            <form id="editMemberForm">
-                <input type="hidden" id="editMemberId" />
+            <button class="modal-close" id="registerModalClose">&times;</button>
+            <div class="modal-title">Регистрация <span class="red">личного кабинета</span></div>
+            <form id="registerForm">
                 <div class="form-group">
-                    <label>ФИО <span class="required">*</span></label>
-                    <input type="text" id="editMemberName" required />
+                    <label>Ваше полное Фамилия Имя Отчество <span class="required">*</span></label>
+                    <input type="text" id="regFullName" placeholder="Иванов Иван Иванович" required />
                 </div>
                 <div class="form-group">
-                    <label>Должность <span class="required">*</span></label>
-                    <input type="text" id="editMemberPosition" required />
+                    <label>Федеральный округ проживания <span class="required">*</span></label>
+                    <input type="text" id="regDistrict" placeholder="Центральный, Приволжский..." required />
                 </div>
                 <div class="form-group">
-                    <label>Фото (загрузить с ПК)</label>
-                    <input type="file" id="editMemberPhoto" accept="image/*" />
-                    <small style="display:block; margin-top:4px; color:#6a7a8e;">Если не выбирать файл, текущее фото останется без изменений.</small>
+                    <label>Номер паспорта <span class="required">*</span></label>
+                    <input type="text" id="regPassport" placeholder="1234567" required />
                 </div>
                 <div class="form-group">
-                    <label>Роль <span class="required">*</span></label>
-                    <select id="editMemberRole" required>
-                        <option value="leader">Руководство</option>
-                        <option value="deputy">Депутат</option>
-                        <option value="member">Член партии</option>
-                    </select>
+                    <label>Ваш возраст <span class="required">*</span></label>
+                    <input type="number" id="regAge" placeholder="18" required />
                 </div>
-                <button type="submit" class="btn btn-primary" style="width:100%;">💾 Сохранить изменения</button>
+                <div class="form-group">
+                    <label>Discord (юзернейм) <span class="required">*</span></label>
+                    <input type="text" id="regDiscord" placeholder="ivan123" required />
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">Зарегистрироваться</button>
             </form>
+            <p style="margin-top:12px; font-size:13px; color:#6a7a8e;">Уже есть аккаунт? <a href="#" id="switchToLogin" style="color:var(--red); font-weight:600;">Войти</a></p>
         </div>
     </div>
 
@@ -475,19 +564,15 @@
 
             <!-- Форма входа в личный кабинет -->
             <div id="profileLoginForm">
-                <p style="margin-bottom:16px; color:#3a4a5e;">Войдите, используя ваше игровое ФИО и номер паспорта.</p>
+                <p style="margin-bottom:16px; color:#3a4a5e;">Войдите, используя номер паспорта.</p>
                 <form id="profileLogin">
-                    <div class="form-group">
-                        <label>Игровое ФИО <span class="required">*</span></label>
-                        <input type="text" id="profileLoginName" placeholder="Иванов Иван Иванович" required />
-                    </div>
                     <div class="form-group">
                         <label>Номер паспорта <span class="required">*</span></label>
                         <input type="text" id="profileLoginPassport" placeholder="1234567" required />
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;">Войти в личный кабинет</button>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">Войти</button>
                 </form>
-                <p style="margin-top:12px; font-size:13px; color:#6a7a8e;">Если вы ещё не подавали заявку, сначала <a href="#" data-page="join" style="color:var(--red); font-weight:600;">подайте заявку</a>.</p>
+                <p style="margin-top:12px; font-size:13px; color:#6a7a8e;">Нет аккаунта? <a href="#" id="switchToRegister" style="color:var(--red); font-weight:600;">Зарегистрироваться</a></p>
             </div>
 
             <!-- Содержимое личного кабинета -->
@@ -498,39 +583,25 @@
                     <h4 style="margin-bottom:8px;">Редактирование профиля</h4>
                     <form id="editProfileForm">
                         <div class="form-group">
-                            <label>Игровое ФИО</label>
+                            <label>ФИО</label>
                             <input type="text" id="editProfileFullName" />
                         </div>
                         <div class="form-group">
-                            <label>Игровой возраст (IC)</label>
-                            <input type="number" id="editProfileIcAge" />
+                            <label>Федеральный округ</label>
+                            <input type="text" id="editProfileDistrict" />
                         </div>
                         <div class="form-group">
-                            <label>Реальный возраст (OOC)</label>
-                            <input type="number" id="editProfileOocAge" />
+                            <label>Возраст</label>
+                            <input type="number" id="editProfileAge" />
                         </div>
                         <div class="form-group">
                             <label>Discord</label>
                             <input type="text" id="editProfileDiscord" />
                         </div>
-                        <div class="form-group">
-                            <label>Мотивация</label>
-                            <textarea id="editProfileMotivation" rows="3"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Поддержка</label>
-                            <textarea id="editProfileSupport" rows="3"></textarea>
-                        </div>
                         <button type="submit" class="btn btn-primary">💾 Сохранить изменения</button>
                         <button type="button" class="btn btn-warning" id="cancelEditProfileBtn" style="margin-left:8px;">Отмена</button>
                     </form>
                 </div>
-
-                <div id="profileActions" style="margin-top:16px;">
-                    <button class="btn btn-danger" id="withdrawApplicationBtn" style="display:none;">🗑️ Отозвать заявку</button>
-                    <button class="btn btn-warning" id="resubmitApplicationBtn" style="display:none;">🔄 Подать заново</button>
-                </div>
-
                 <button class="btn btn-danger" id="profileLogoutBtn" style="margin-top:16px;">Выйти из кабинета</button>
             </div>
         </div>
@@ -548,9 +619,8 @@
                 <div class="footer-col">
                     <h4>Информация</h4>
                     <ul>
-                        <li><a href="#" data-page="about">История</a></li>
-                        <li><a href="https://docs.google.com/document/d/1jbB8m4UIQ8ofIA2R3Sq0za4WuRFdfa1_knZNNJmUSaY/edit?tab=t.0" target="_blank">Устав</a></li>
-                        <li><a href="https://docs.google.com/document/d/1ky5703-hOKOFJkb-BSoYjXGQ40fkx8F9Q1uMKOkkyBs/edit?tab=t.0#heading=h.57io7eu4lf2k" target="_blank">Программа</a></li>
+                        <li><a href="#" data-page="history">История</a></li>
+                        <li><a href="#" data-page="docs">Документы</a></li>
                         <li><a href="#" data-page="about">Контакты</a></li>
                         <li><a href="#" data-page="about">Документация</a></li>
                     </ul>
