@@ -16,8 +16,25 @@
         <h1 style="font-size:48px; margin-bottom:20px;">🔧 Ведутся технические работы</h1>
         <p style="font-size:20px; max-width:600px;">Сайт временно недоступен. Приносим извинения за неудобства. Пожалуйста, зайдите позже.</p>
         <p style="margin-top:16px; font-size:14px; opacity:0.7;">ВЦПП «Новая Россия»</p>
-        <!-- Кнопка входа для админа (всегда видна) -->
-        <button class="btn btn-primary" id="maintenanceLoginBtn" style="margin-top:30px; padding:12px 40px; font-size:16px;">Вход для администратора</button>
+        <!-- НЕЗАМЕТНАЯ КНОПКА ВХОДА ДЛЯ АДМИНИСТРАТОРА -->
+        <button id="maintenanceLoginBtn" style="
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.3);
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 4px 14px;
+            font-size: 11px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.3s;
+            z-index: 100000;
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        ">
+            ⚙ админ
+        </button>
     </div>
 
     <!-- ===== HEADER ===== -->
