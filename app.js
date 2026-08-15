@@ -219,31 +219,6 @@ let visibilitySettings = {};
 let contentSettings = {};
 
 // ============================================================
-// CUSTOM ALERT/CONFIRM (безопасные, с обычными alert для отладки)
-// ============================================================
-// Временно отключаем кастомные alert, чтобы не мешали отладке
-window.alert = function(message) {
-    // Используем стандартный alert, но можно раскомментировать кастомный позже
-    return originalAlert(message);
-};
-const originalAlert = window.alert;
-const originalConfirm = window.confirm;
-
-// Можно оставить кастомные, но добавить fallback
-function safeAlert(message, title = 'Уведомление') {
-    // Просто используем стандартный alert для надёжности
-    alert(message);
-}
-
-function safeConfirm(message) {
-    return confirm(message);
-}
-
-// Заменяем на безопасные версии
-window.alert = safeAlert;
-window.confirm = safeConfirm;
-
-// ============================================================
 // RENDER FUNCTIONS
 // ============================================================
 async function renderNews() {
