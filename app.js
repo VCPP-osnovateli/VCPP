@@ -41,6 +41,7 @@ const dbFirebase = {
         await database.ref(`news/${id}`).update(newData);
     },
 
+    // Заявки на вступление (users) – они же пользователи, но с отдельным полем status
     async getUsers() {
         const snapshot = await database.ref('users').once('value');
         return this._toArray(snapshot);
@@ -61,6 +62,7 @@ const dbFirebase = {
         await database.ref(`users/${id}`).update(newData);
     },
 
+    // Члены партии (отдельно от пользователей)
     async getMembers() {
         const snapshot = await database.ref('members').once('value');
         return this._toArray(snapshot);
@@ -79,7 +81,7 @@ const dbFirebase = {
         await database.ref(`members/${id}`).update(newData);
     },
 
-    // Настройки (символика, фон, видимость)
+    // Настройки (символика, фон, видимость, контент)
     async getSetting(key) {
         const snapshot = await database.ref(`settings/${key}`).once('value');
         return snapshot.val();
@@ -91,7 +93,7 @@ const dbFirebase = {
         await database.ref(`settings/${key}`).remove();
     },
 
-    // Символика – прямое обращение к настройкам
+    // Символика
     async getSymbol(symbolKey) {
         return this.getSetting(symbolKey);
     },
@@ -102,6 +104,7 @@ const dbFirebase = {
         await this.deleteSetting(symbolKey);
     },
 
+    // Выборы
     async getElections() {
         const snapshot = await database.ref('elections').once('value');
         const data = snapshot.val();
@@ -115,6 +118,7 @@ const dbFirebase = {
         await database.ref('elections').set(data);
     },
 
+    // Настройки видимости
     async getVisibilitySettings() {
         const val = await this.getSetting('visibility');
         if (!val) {
@@ -124,7 +128,9 @@ const dbFirebase = {
                 showPress: true,
                 showSymbols: true,
                 showAbout: true,
-                showJoin: true
+                showJoin: true,
+                showHistory: true,
+                showDocs: true
             };
             await this.setSetting('visibility', defaults);
             return defaults;
@@ -133,6 +139,24 @@ const dbFirebase = {
     },
     async setVisibilitySettings(settings) {
         await this.setSetting('visibility', settings);
+    },
+
+    // Контент страниц (тексты)
+    async getContent() {
+        const val = await this.getSetting('content');
+        if (!val) {
+            const defaults = {
+                heroTitle: 'Построим будущее вместе с «Новой Россией»',
+                heroSubtitle: 'Наша программа, история и цели для создания лучшего завтра. Присоединяйтесь к движению на сервере Рублевка RMRP.',
+                missionText: 'Всероссийская центристская политическая партия «Новая Россия» — это политическая сила, объединяющая граждан, стремящихся к построению свободного, справедливого и процветающего общества. Мы верим в силу демократических институтов, верховенство права и свободу личности. Наша цель — создание условий, при которых каждый гражданин сможет реализовать свой потенциал.'
+            };
+            await this.setSetting('content', defaults);
+            return defaults;
+        }
+        return val;
+    },
+    async setContent(content) {
+        await this.setSetting('content', content);
     },
 
     async seed() {
@@ -188,6 +212,7 @@ const dbFirebase = {
         }
 
         await this.getVisibilitySettings();
+        await this.getContent();
     }
 };
 
@@ -195,9 +220,77 @@ const dbFirebase = {
 // GLOBAL VARIABLES
 // ============================================================
 let isAdminLoggedIn = false;
-let currentUser = null;
+let currentUser = null; // зарегистрированный пользователь (для личного кабинета)
+let currentProfileUser = null; // для отображения в кабинете
 let isEditingProfile = false;
 let visibilitySettings = {};
+let contentSettings = {};
+
+// ============================================================
+// CUSTOM ALERT/CONFIRM (кастомные окна)
+// ============================================================
+function customAlert(message, title = 'Уведомление') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay open';
+        overlay.style.display = 'flex';
+        overlay.innerHTML = `
+            <div class="modal-box" style="max-width:400px;">
+                <div class="modal-title">${title}</div>
+                <p style="margin:16px 0; color:#3a4a5e;">${message}</p>
+                <button class="btn btn-primary" style="width:100%;" id="customAlertBtn">ОК</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        document.getElementById('customAlertBtn').addEventListener('click', function() {
+            overlay.remove();
+            resolve();
+        });
+        overlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                overlay.remove();
+                resolve();
+            }
+        });
+    });
+}
+
+function customConfirm(message) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay open';
+        overlay.style.display = 'flex';
+        overlay.innerHTML = `
+            <div class="modal-box" style="max-width:400px;">
+                <div class="modal-title">Подтверждение</div>
+                <p style="margin:16px 0; color:#3a4a5e;">${message}</p>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn btn-primary" style="flex:1;" id="customConfirmYes">Да</button>
+                    <button class="btn btn-danger" style="flex:1;" id="customConfirmNo">Нет</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        document.getElementById('customConfirmYes').addEventListener('click', function() {
+            overlay.remove();
+            resolve(true);
+        });
+        document.getElementById('customConfirmNo').addEventListener('click', function() {
+            overlay.remove();
+            resolve(false);
+        });
+        overlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                overlay.remove();
+                resolve(false);
+            }
+        });
+    });
+}
+
+// Переопределяем глобальные alert и confirm
+window.alert = customAlert;
+window.confirm = customConfirm;
 
 // ============================================================
 // RENDER FUNCTIONS
@@ -244,9 +337,11 @@ async function renderNews() {
             adminList.querySelectorAll('[data-news-id]').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const id = this.getAttribute('data-news-id');
-                    await dbFirebase.deleteNews(id);
-                    await renderNews();
-                    await renderComposition();
+                    if (await customConfirm('Удалить эту новость?')) {
+                        await dbFirebase.deleteNews(id);
+                        await renderNews();
+                        await renderComposition();
+                    }
                 });
             });
         }
@@ -324,18 +419,21 @@ async function renderComposition() {
     }
 }
 
+// ===== ЗАЯВКИ =====
 async function renderApplications() {
     try {
         const users = await dbFirebase.getUsers();
+        // Показываем только те, у которых есть поле status (заявки)
+        const applications = users.filter(u => u.status !== undefined);
         const list = document.getElementById('applicationsList');
         if (!list) return;
 
-        if (users.length === 0) {
+        if (applications.length === 0) {
             list.innerHTML = '<p>Заявок пока нет.</p>';
             return;
         }
 
-        list.innerHTML = users.map(user => `
+        list.innerHTML = applications.map(user => `
             <div class="application-item">
                 <div class="app-header">
                     <span class="app-name">${user.fullName}</span>
@@ -344,7 +442,8 @@ async function renderApplications() {
                 <div class="app-details">
                     <p><strong>Возраст (IC):</strong> ${user.icAge} | <strong>OOC:</strong> ${user.oocAge}</p>
                     <p><strong>Паспорт:</strong> ${user.passport} | <strong>Discord:</strong> ${user.discord}</p>
-                    <p><strong>Мотивация:</strong> ${user.motivation}</p>
+                    <p><strong>Идеология:</strong> ${user.ideology || 'Не указана'}</p>
+                    <p><strong>Почему наша партия:</strong> ${user.reason || 'Не указано'}</p>
                     <p><strong>Поддержка:</strong> ${user.support}</p>
                     ${user.passportLink ? `<p><strong>Ссылка на паспорт:</strong> <a href="${user.passportLink}" target="_blank">${user.passportLink}</a></p>` : ''}
                 </div>
@@ -392,20 +491,21 @@ async function handleApplication(userId, action) {
 }
 
 document.getElementById('clearProcessedBtn').addEventListener('click', async function() {
-    if (!confirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
+    if (!await customConfirm('Удалить все уже рассмотренные заявки (одобренные и отклонённые)?')) return;
     const users = await dbFirebase.getUsers();
     const processed = users.filter(u => u.status === 'approved' || u.status === 'rejected');
     if (processed.length === 0) {
-        alert('Нет рассмотренных заявок для удаления.');
+        await alert('Нет рассмотренных заявок для удаления.');
         return;
     }
     for (const user of processed) {
         await dbFirebase.deleteUser(user.id);
     }
     await renderApplications();
-    alert(`Удалено ${processed.length} заявок.`);
+    await alert(`Удалено ${processed.length} заявок.`);
 });
 
+// ===== УПРАВЛЕНИЕ СОСТАВОМ (админ) =====
 async function renderAdminMembers() {
     try {
         const members = await dbFirebase.getMembers();
@@ -431,7 +531,7 @@ async function renderAdminMembers() {
         list.querySelectorAll('.btn-danger[data-member-id]').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const id = this.getAttribute('data-member-id');
-                if (confirm('Удалить этого члена из состава?')) {
+                if (await customConfirm('Удалить этого члена из состава?')) {
                     await dbFirebase.deleteMember(id);
                     await renderAdminMembers();
                     await renderComposition();
@@ -450,9 +550,7 @@ async function renderAdminMembers() {
     }
 }
 
-// ============================================================
-// EDIT MEMBER MODAL
-// ============================================================
+// ===== РЕДАКТИРОВАНИЕ ЧЛЕНА =====
 const editMemberModal = document.getElementById('editMemberModal');
 const editMemberModalClose = document.getElementById('editMemberModalClose');
 const editMemberForm = document.getElementById('editMemberForm');
@@ -492,7 +590,7 @@ editMemberForm.addEventListener('submit', async function(e) {
     const role = editMemberRole.value;
 
     if (!name || !position) {
-        alert('Заполните ФИО и должность!');
+        await alert('Заполните ФИО и должность!');
         return;
     }
 
@@ -500,7 +598,7 @@ editMemberForm.addEventListener('submit', async function(e) {
     if (editMemberPhoto.files && editMemberPhoto.files[0]) {
         const file = editMemberPhoto.files[0];
         if (!file.type.startsWith('image/')) {
-            alert('Пожалуйста, выберите файл изображения.');
+            await alert('Пожалуйста, выберите файл изображения.');
             return;
         }
         photoData = await new Promise((resolve, reject) => {
@@ -520,7 +618,7 @@ editMemberForm.addEventListener('submit', async function(e) {
     await renderAdminMembers();
     await renderComposition();
     closeEditMemberModal();
-    alert('✅ Данные члена партии обновлены!');
+    await alert('✅ Данные члена партии обновлены!');
 });
 
 // ============================================================
@@ -641,18 +739,18 @@ document.getElementById('electionsForm').addEventListener('submit', async functi
     });
 
     if (parties.length === 0) {
-        alert('Добавьте хотя бы одну партию с корректными данными.');
+        await alert('Добавьте хотя бы одну партию с корректными данными.');
         return;
     }
 
     const electionsData = { parties, date, time, footer, footerDate };
     await dbFirebase.setElections(electionsData);
     await renderElections();
-    alert('✅ Данные о выборах обновлены!');
+    await alert('✅ Данные о выборах обновлены!');
 });
 
 // ============================================================
-// SYMBOLS (публичная страница)
+// SYMBOLS
 // ============================================================
 async function renderSymbolsPage() {
     const container = document.getElementById('symbolsContainer');
@@ -697,6 +795,8 @@ async function loadVisibilitySettings() {
     document.getElementById('showSymbols').checked = visibilitySettings.showSymbols !== false;
     document.getElementById('showAbout').checked = visibilitySettings.showAbout !== false;
     document.getElementById('showJoin').checked = visibilitySettings.showJoin !== false;
+    document.getElementById('showHistory').checked = visibilitySettings.showHistory !== false;
+    document.getElementById('showDocs').checked = visibilitySettings.showDocs !== false;
     applyVisibility();
 }
 
@@ -707,7 +807,9 @@ function applyVisibility() {
         symbols: 'showSymbols',
         composition: 'showComposition',
         press: 'showPress',
-        join: 'showJoin'
+        join: 'showJoin',
+        history: 'showHistory',
+        docs: 'showDocs'
     };
     navLinks.forEach(link => {
         const page = link.dataset.page;
@@ -726,7 +828,9 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
         showPress: document.getElementById('showPress').checked,
         showSymbols: document.getElementById('showSymbols').checked,
         showAbout: document.getElementById('showAbout').checked,
-        showJoin: document.getElementById('showJoin').checked
+        showJoin: document.getElementById('showJoin').checked,
+        showHistory: document.getElementById('showHistory').checked,
+        showDocs: document.getElementById('showDocs').checked
     };
 
     await dbFirebase.setVisibilitySettings(newSettings);
@@ -741,154 +845,40 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
             showPage('home');
         }
     }
-    alert('✅ Настройки сохранены!');
-});
-
-document.getElementById('applyBgBtn').addEventListener('click', async function() {
-    const fileInput = document.getElementById('bgImage');
-    if (!fileInput.files || !fileInput.files[0]) {
-        alert('Выберите изображение.');
-        return;
-    }
-    const file = fileInput.files[0];
-    if (!file.type.startsWith('image/')) {
-        alert('Пожалуйста, выберите файл изображения.');
-        return;
-    }
-    const photoData = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(e.target.error);
-        reader.readAsDataURL(file);
-    });
-    await dbFirebase.setSetting('background', photoData);
-    await applyBackground();
-    alert('Фон успешно обновлён!');
-    fileInput.value = '';
-});
-
-document.getElementById('resetBgBtn').addEventListener('click', async function() {
-    if (confirm('Сбросить фоновое изображение?')) {
-        await dbFirebase.setSetting('background', '');
-        await applyBackground();
-        alert('Фон сброшен.');
-    }
+    await alert('✅ Настройки сохранены!');
 });
 
 // ============================================================
-// PROFILE FUNCTIONS
+// CONTENT SETTINGS (редактирование текстов)
 // ============================================================
-function showProfileContent(user) {
-    const profileLoginForm = document.getElementById('profileLoginForm');
-    const profileContent = document.getElementById('profileContent');
-    const profileInfo = document.getElementById('profileInfo');
-    const editProfileToggleBtn = document.getElementById('editProfileToggleBtn');
-    const profileEditForm = document.getElementById('profileEditForm');
-    const withdrawBtn = document.getElementById('withdrawApplicationBtn');
-    const resubmitBtn = document.getElementById('resubmitApplicationBtn');
-
-    profileLoginForm.style.display = 'none';
-    profileContent.style.display = 'block';
-
-    const statusText = user.status === 'pending' ? 'На рассмотрении' : user.status === 'approved' ? 'Одобрена' : 'Отклонена';
-    profileInfo.innerHTML = `
-        <h3 style="margin-bottom:8px;">${user.fullName}</h3>
-        <p><strong>Статус заявки:</strong> <span class="app-status ${user.status}">${statusText}</span></p>
-        <p><strong>Игровой возраст:</strong> ${user.icAge}</p>
-        <p><strong>Реальный возраст:</strong> ${user.oocAge}</p>
-        <p><strong>Discord:</strong> ${user.discord}</p>
-        <p><strong>Мотивация:</strong> ${user.motivation}</p>
-        <p><strong>Поддержка:</strong> ${user.support}</p>
-        ${user.status === 'approved' ? '<p style="color:#2e7d32; font-weight:600;">✓ Вы приняты в партию! Добро пожаловать!</p>' : ''}
-        ${user.status === 'rejected' ? '<p style="color:#d32f2f; font-weight:600;">✗ К сожалению, ваша заявка отклонена.</p>' : ''}
-    `;
-
-    withdrawBtn.style.display = (user.status === 'pending') ? 'inline-block' : 'none';
-    resubmitBtn.style.display = (user.status === 'rejected') ? 'inline-block' : 'none';
-
-    document.getElementById('editProfileFullName').value = user.fullName || '';
-    document.getElementById('editProfileIcAge').value = user.icAge || '';
-    document.getElementById('editProfileOocAge').value = user.oocAge || '';
-    document.getElementById('editProfileDiscord').value = user.discord || '';
-    document.getElementById('editProfileMotivation').value = user.motivation || '';
-    document.getElementById('editProfileSupport').value = user.support || '';
-
-    profileEditForm.style.display = 'none';
-    isEditingProfile = false;
-    editProfileToggleBtn.textContent = '✏️ Редактировать профиль';
+async function loadContentSettings() {
+    contentSettings = await dbFirebase.getContent();
+    document.getElementById('heroTitleInput').value = contentSettings.heroTitle || '';
+    document.getElementById('heroSubtitleInput').value = contentSettings.heroSubtitle || '';
+    document.getElementById('missionTextInput').value = contentSettings.missionText || '';
+    applyContent();
 }
 
-document.getElementById('editProfileToggleBtn').addEventListener('click', function() {
-    const form = document.getElementById('profileEditForm');
-    if (isEditingProfile) {
-        form.style.display = 'none';
-        isEditingProfile = false;
-        this.textContent = '✏️ Редактировать профиль';
-    } else {
-        form.style.display = 'block';
-        isEditingProfile = true;
-        this.textContent = '❌ Отменить редактирование';
-    }
-});
+function applyContent() {
+    const heroTitle = document.getElementById('heroTitle');
+    const heroSubtitle = document.getElementById('heroSubtitle');
+    const missionText = document.getElementById('missionText');
+    if (heroTitle) heroTitle.innerHTML = contentSettings.heroTitle || 'Построим будущее вместе с «Новой Россией»';
+    if (heroSubtitle) heroSubtitle.textContent = contentSettings.heroSubtitle || 'Наша программа, история и цели для создания лучшего завтра. Присоединяйтесь к движению на сервере Рублевка RMRP.';
+    if (missionText) missionText.textContent = contentSettings.missionText || 'Всероссийская центристская политическая партия «Новая Россия» — это политическая сила, объединяющая граждан, стремящихся к построению свободного, справедливого и процветающего общества. Мы верим в силу демократических институтов, верховенство права и свободу личности. Наша цель — создание условий, при которых каждый гражданин сможет реализовать свой потенциал.';
+}
 
-document.getElementById('cancelEditProfileBtn').addEventListener('click', function() {
-    const form = document.getElementById('profileEditForm');
-    form.style.display = 'none';
-    isEditingProfile = false;
-    document.getElementById('editProfileToggleBtn').textContent = '✏️ Редактировать профиль';
-});
-
-document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
+document.getElementById('contentForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    if (!currentUser) return;
-
-    const fullName = document.getElementById('editProfileFullName').value.trim();
-    const icAge = parseInt(document.getElementById('editProfileIcAge').value);
-    const oocAge = parseInt(document.getElementById('editProfileOocAge').value);
-    const discord = document.getElementById('editProfileDiscord').value.trim();
-    const motivation = document.getElementById('editProfileMotivation').value.trim();
-    const support = document.getElementById('editProfileSupport').value.trim();
-
-    if (!fullName || !icAge || !oocAge || !discord || !motivation || !support) {
-        alert('Все поля обязательны для заполнения!');
-        return;
-    }
-
-    const updatedData = { fullName, icAge, oocAge, discord, motivation, support };
-    try {
-        await dbFirebase.updateUser(currentUser.id, updatedData);
-        currentUser = { ...currentUser, ...updatedData };
-        showProfileContent(currentUser);
-        if (isAdminLoggedIn) await renderApplications();
-        alert('✅ Данные профиля обновлены!');
-    } catch (error) {
-        alert('Ошибка при обновлении профиля: ' + error.message);
-    }
-});
-
-document.getElementById('withdrawApplicationBtn').addEventListener('click', async function() {
-    if (!currentUser || currentUser.status !== 'pending') return;
-    if (!confirm('Вы уверены, что хотите отозвать свою заявку?')) return;
-    try {
-        await dbFirebase.deleteUser(currentUser.id);
-        currentUser = null;
-        saveUserState(null);
-        document.getElementById('profileLoginForm').style.display = 'block';
-        document.getElementById('profileContent').style.display = 'none';
-        if (isAdminLoggedIn) await renderApplications();
-        alert('Заявка отозвана.');
-        closeProfileModal();
-    } catch (error) {
-        alert('Ошибка при отзыве заявки: ' + error.message);
-    }
-});
-
-document.getElementById('resubmitApplicationBtn').addEventListener('click', function() {
-    if (!currentUser || currentUser.status !== 'rejected') return;
-    closeProfileModal();
-    showPage('join');
-    document.getElementById('joinForm').reset();
-    alert('Заполните анкету заново для повторной подачи заявки.');
+    const newContent = {
+        heroTitle: document.getElementById('heroTitleInput').value,
+        heroSubtitle: document.getElementById('heroSubtitleInput').value,
+        missionText: document.getElementById('missionTextInput').value
+    };
+    await dbFirebase.setContent(newContent);
+    contentSettings = newContent;
+    applyContent();
+    await alert('✅ Контент обновлён!');
 });
 
 // ============================================================
@@ -902,6 +892,291 @@ async function applyBackground() {
         document.body.style.backgroundImage = '';
     }
 }
+
+document.getElementById('applyBgBtn').addEventListener('click', async function() {
+    const fileInput = document.getElementById('bgImage');
+    if (!fileInput.files || !fileInput.files[0]) {
+        await alert('Выберите изображение.');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (!file.type.startsWith('image/')) {
+        await alert('Пожалуйста, выберите файл изображения.');
+        return;
+    }
+    const photoData = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e.target.error);
+        reader.readAsDataURL(file);
+    });
+    await dbFirebase.setSetting('background', photoData);
+    await applyBackground();
+    await alert('Фон успешно обновлён!');
+    fileInput.value = '';
+});
+
+document.getElementById('resetBgBtn').addEventListener('click', async function() {
+    if (await customConfirm('Сбросить фоновое изображение?')) {
+        await dbFirebase.setSetting('background', '');
+        await applyBackground();
+        await alert('Фон сброшен.');
+    }
+});
+
+// ============================================================
+// USER MANAGEMENT (админка)
+// ============================================================
+async function renderAdminUsers() {
+    const users = await dbFirebase.getUsers();
+    const list = document.getElementById('adminUsersList');
+    if (!list) return;
+    if (users.length === 0) {
+        list.innerHTML = '<p>Пользователей пока нет.</p>';
+        return;
+    }
+    list.innerHTML = users.map(u => `
+        <div class="admin-news-item">
+            <div class="info">
+                <div class="title">${u.fullName}</div>
+                <div class="date">Паспорт: ${u.passport} • Роль: ${u.role || 'пользователь'}</div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-danger btn-sm" data-user-id="${u.id}">Удалить</button>
+            </div>
+        </div>
+    `).join('');
+
+    list.querySelectorAll('.btn-danger[data-user-id]').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-user-id');
+            if (await customConfirm('Удалить этого пользователя?')) {
+                await dbFirebase.deleteUser(id);
+                await renderAdminUsers();
+            }
+        });
+    });
+}
+
+document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fullName = document.getElementById('adminUserName').value.trim();
+    const passport = document.getElementById('adminUserPassport').value.trim();
+    const role = document.getElementById('adminUserRole').value;
+
+    if (!fullName || !passport) {
+        await alert('Заполните все поля!');
+        return;
+    }
+
+    try {
+        await dbFirebase.addUser({ fullName, passport, role, status: 'registered' });
+        await renderAdminUsers();
+        this.reset();
+        await alert('✅ Пользователь добавлен!');
+    } catch (err) {
+        await alert(err.message);
+    }
+});
+
+// ============================================================
+// REGISTER (личный кабинет)
+// ============================================================
+const registerModal = document.getElementById('registerModal');
+const registerModalClose = document.getElementById('registerModalClose');
+const registerForm = document.getElementById('registerForm');
+
+async function openRegisterModal() {
+    registerModal.classList.add('open');
+}
+
+function closeRegisterModal() {
+    registerModal.classList.remove('open');
+}
+
+registerModalClose.addEventListener('click', closeRegisterModal);
+registerModal.addEventListener('click', function(e) {
+    if (e.target === this) closeRegisterModal();
+});
+
+registerForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fullName = document.getElementById('regFullName').value.trim();
+    const district = document.getElementById('regDistrict').value.trim();
+    const passport = document.getElementById('regPassport').value.trim();
+    const age = parseInt(document.getElementById('regAge').value);
+    const discord = document.getElementById('regDiscord').value.trim();
+
+    if (!fullName || !district || !passport || !age || !discord) {
+        await alert('Заполните все поля!');
+        return;
+    }
+
+    try {
+        await dbFirebase.addUser({
+            fullName,
+            district,
+            passport,
+            age,
+            discord,
+            role: 'user',
+            status: 'registered' // не заявка, а просто регистрация
+        });
+        await alert('✅ Регистрация успешна! Теперь войдите в личный кабинет.');
+        closeRegisterModal();
+        // Переключаем на форму входа в личный кабинет
+        document.getElementById('profileLoginForm').style.display = 'block';
+        document.getElementById('profileContent').style.display = 'none';
+        // Очищаем поля
+        registerForm.reset();
+    } catch (err) {
+        await alert(err.message);
+    }
+});
+
+// ============================================================
+// PROFILE (личный кабинет)
+// ============================================================
+const profileModal = document.getElementById('profileModal');
+const profileModalClose = document.getElementById('profileModalClose');
+const profileLogin = document.getElementById('profileLogin');
+const profileLoginPassport = document.getElementById('profileLoginPassport');
+const profileContent = document.getElementById('profileContent');
+const profileLoginForm = document.getElementById('profileLoginForm');
+const profileInfo = document.getElementById('profileInfo');
+const profileLogoutBtn = document.getElementById('profileLogoutBtn');
+const editProfileToggleBtn = document.getElementById('editProfileToggleBtn');
+const profileEditForm = document.getElementById('profileEditForm');
+const editProfileForm = document.getElementById('editProfileForm');
+const cancelEditProfileBtn = document.getElementById('cancelEditProfileBtn');
+const switchToRegister = document.getElementById('switchToRegister');
+const switchToLogin = document.getElementById('switchToLogin');
+
+function openProfileModal() {
+    profileModal.classList.add('open');
+    if (currentUser) {
+        showProfileContent(currentUser);
+    } else {
+        profileLoginForm.style.display = 'block';
+        profileContent.style.display = 'none';
+    }
+}
+
+function closeProfileModal() {
+    profileModal.classList.remove('open');
+}
+
+profileModalClose.addEventListener('click', closeProfileModal);
+profileModal.addEventListener('click', function(e) {
+    if (e.target === this) closeProfileModal();
+});
+
+// Вход в личный кабинет
+profileLogin.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const passport = profileLoginPassport.value.trim();
+    if (!passport) {
+        await alert('Введите номер паспорта.');
+        return;
+    }
+    const users = await dbFirebase.getUsers();
+    const user = users.find(u => u.passport === passport && u.status === 'registered');
+    if (user) {
+        currentUser = user;
+        showProfileContent(user);
+        await alert('✅ Добро пожаловать в личный кабинет!');
+    } else {
+        await alert('Пользователь с таким паспортом не найден. Зарегистрируйтесь.');
+    }
+});
+
+function showProfileContent(user) {
+    profileLoginForm.style.display = 'none';
+    profileContent.style.display = 'block';
+
+    profileInfo.innerHTML = `
+        <h3 style="margin-bottom:8px;">${user.fullName}</h3>
+        <p><strong>Федеральный округ:</strong> ${user.district || 'Не указан'}</p>
+        <p><strong>Номер паспорта:</strong> ${user.passport}</p>
+        <p><strong>Возраст:</strong> ${user.age || 'Не указан'}</p>
+        <p><strong>Discord:</strong> ${user.discord || 'Не указан'}</p>
+        <p><strong>Роль:</strong> ${user.role || 'пользователь'}</p>
+    `;
+
+    // Заполняем форму редактирования
+    document.getElementById('editProfileFullName').value = user.fullName || '';
+    document.getElementById('editProfileDistrict').value = user.district || '';
+    document.getElementById('editProfileAge').value = user.age || '';
+    document.getElementById('editProfileDiscord').value = user.discord || '';
+
+    profileEditForm.style.display = 'none';
+    isEditingProfile = false;
+    editProfileToggleBtn.textContent = '✏️ Редактировать профиль';
+}
+
+// Редактирование профиля
+editProfileToggleBtn.addEventListener('click', function() {
+    if (isEditingProfile) {
+        profileEditForm.style.display = 'none';
+        isEditingProfile = false;
+        this.textContent = '✏️ Редактировать профиль';
+    } else {
+        profileEditForm.style.display = 'block';
+        isEditingProfile = true;
+        this.textContent = '❌ Отменить редактирование';
+    }
+});
+
+cancelEditProfileBtn.addEventListener('click', function() {
+    profileEditForm.style.display = 'none';
+    isEditingProfile = false;
+    editProfileToggleBtn.textContent = '✏️ Редактировать профиль';
+});
+
+editProfileForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const fullName = document.getElementById('editProfileFullName').value.trim();
+    const district = document.getElementById('editProfileDistrict').value.trim();
+    const age = parseInt(document.getElementById('editProfileAge').value);
+    const discord = document.getElementById('editProfileDiscord').value.trim();
+
+    if (!fullName || !district || !age || !discord) {
+        await alert('Все поля обязательны для заполнения!');
+        return;
+    }
+
+    const updatedData = { fullName, district, age, discord };
+    try {
+        await dbFirebase.updateUser(currentUser.id, updatedData);
+        currentUser = { ...currentUser, ...updatedData };
+        showProfileContent(currentUser);
+        await alert('✅ Данные профиля обновлены!');
+    } catch (error) {
+        await alert('Ошибка при обновлении профиля: ' + error.message);
+    }
+});
+
+profileLogoutBtn.addEventListener('click', function() {
+    currentUser = null;
+    profileLoginForm.style.display = 'block';
+    profileContent.style.display = 'none';
+    profileLoginPassport.value = '';
+    closeProfileModal();
+});
+
+switchToRegister.addEventListener('click', function(e) {
+    e.preventDefault();
+    closeProfileModal();
+    openRegisterModal();
+});
+
+switchToLogin.addEventListener('click', function(e) {
+    e.preventDefault();
+    closeRegisterModal();
+    openProfileModal();
+});
 
 // ============================================================
 // SAVE / RESTORE STATE
@@ -934,7 +1209,7 @@ async function restoreState() {
     const userId = localStorage.getItem('user_id');
     if (userId) {
         const users = await dbFirebase.getUsers();
-        const user = users.find(u => u.id === userId);
+        const user = users.find(u => u.id === userId && u.status === 'registered');
         if (user) {
             currentUser = user;
         } else {
@@ -949,23 +1224,17 @@ async function restoreState() {
 function setupEventListeners() {
     const loginModal = document.getElementById('loginModal');
     const adminModal = document.getElementById('adminModal');
-    const profileModal = document.getElementById('profileModal');
     const loginBtn = document.getElementById('loginBtn');
     const profileBtn = document.getElementById('profileBtn');
     const loginModalClose = document.getElementById('loginModalClose');
     const adminModalClose = document.getElementById('adminModalClose');
-    const profileModalClose = document.getElementById('profileModalClose');
     const loginForm = document.getElementById('loginForm');
     const adminLogoutBtn = document.getElementById('adminLogoutBtn');
-    const profileLogin = document.getElementById('profileLogin');
-    const profileLogoutBtn = document.getElementById('profileLogoutBtn');
 
     function openLoginModal() { loginModal.classList.add('open'); }
     function closeLoginModal() { loginModal.classList.remove('open'); }
     function openAdminModal() { adminModal.classList.add('open'); }
     function closeAdminModal() { adminModal.classList.remove('open'); }
-    function openProfileModal() { profileModal.classList.add('open'); }
-    function closeProfileModal() { profileModal.classList.remove('open'); }
 
     loginBtn.addEventListener('click', function() {
         if (isAdminLoggedIn) {
@@ -974,6 +1243,8 @@ function setupEventListeners() {
             renderAdminMembers();
             populateElectionsForm();
             loadVisibilitySettings();
+            loadContentSettings();
+            renderAdminUsers();
         } else {
             openLoginModal();
         }
@@ -981,20 +1252,12 @@ function setupEventListeners() {
 
     profileBtn.addEventListener('click', function() {
         openProfileModal();
-        if (currentUser) {
-            showProfileContent(currentUser);
-        } else {
-            document.getElementById('profileLoginForm').style.display = 'block';
-            document.getElementById('profileContent').style.display = 'none';
-        }
     });
 
     loginModalClose.addEventListener('click', closeLoginModal);
     adminModalClose.addEventListener('click', closeAdminModal);
-    profileModalClose.addEventListener('click', closeProfileModal);
     loginModal.addEventListener('click', function(e) { if (e.target === this) closeLoginModal(); });
     adminModal.addEventListener('click', function(e) { if (e.target === this) closeAdminModal(); });
-    profileModal.addEventListener('click', function(e) { if (e.target === this) closeProfileModal(); });
 
     loginForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -1011,6 +1274,8 @@ function setupEventListeners() {
             renderAdminMembers();
             populateElectionsForm();
             loadVisibilitySettings();
+            loadContentSettings();
+            renderAdminUsers();
         } else {
             alert('Неверный логин или пароль!');
         }
@@ -1024,30 +1289,7 @@ function setupEventListeners() {
         closeAdminModal();
     });
 
-    profileLogin.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const fullName = document.getElementById('profileLoginName').value.trim();
-        const passport = document.getElementById('profileLoginPassport').value.trim();
-        const users = await dbFirebase.getUsers();
-        const user = users.find(u => u.fullName === fullName && u.passport === passport);
-        if (user) {
-            currentUser = user;
-            saveUserState(user.id);
-            showProfileContent(user);
-        } else {
-            alert('Пользователь с таким ФИО и паспортом не найден.');
-        }
-    });
-
-    profileLogoutBtn.addEventListener('click', function() {
-        currentUser = null;
-        saveUserState(null);
-        document.getElementById('profileLoginForm').style.display = 'block';
-        document.getElementById('profileContent').style.display = 'none';
-        closeProfileModal();
-    });
-
-    // ----- ADMIN FORMS -----
+    // ----- ADMIN FORMS (новости, члены) -----
     const addNewsForm = document.getElementById('addNewsForm');
     const addMemberForm = document.getElementById('addMemberForm');
 
@@ -1061,7 +1303,7 @@ function setupEventListeners() {
             addNewsForm.reset();
             await renderNews();
         } else {
-            alert('Заполните все поля!');
+            await alert('Заполните все поля!');
         }
     });
 
@@ -1073,7 +1315,7 @@ function setupEventListeners() {
         const role = document.getElementById('memberRole').value;
 
         if (!name || !position) {
-            alert('Введите ФИО и должность!');
+            await alert('Введите ФИО и должность!');
             return;
         }
 
@@ -1081,7 +1323,7 @@ function setupEventListeners() {
         if (fileInput.files && fileInput.files[0]) {
             const file = fileInput.files[0];
             if (!file.type.startsWith('image/')) {
-                alert('Пожалуйста, выберите файл изображения.');
+                await alert('Пожалуйста, выберите файл изображения.');
                 return;
             }
             photoData = await new Promise((resolve, reject) => {
@@ -1104,6 +1346,8 @@ function setupEventListeners() {
     const pageSections = {
         home: document.getElementById('page-home'),
         about: document.getElementById('page-about'),
+        history: document.getElementById('page-history'),
+        docs: document.getElementById('page-docs'),
         symbols: document.getElementById('page-symbols'),
         composition: document.getElementById('page-composition'),
         press: document.getElementById('page-press'),
@@ -1117,7 +1361,9 @@ function setupEventListeners() {
             symbols: 'showSymbols',
             composition: 'showComposition',
             press: 'showPress',
-            join: 'showJoin'
+            join: 'showJoin',
+            history: 'showHistory',
+            docs: 'showDocs'
         };
         if (pageId !== 'home') {
             const key = pageMap[pageId];
@@ -1166,12 +1412,13 @@ function setupEventListeners() {
         const oocAge = parseInt(document.getElementById('joinOocAge').value);
         const passport = document.getElementById('joinPassport').value.trim();
         const passportLink = document.getElementById('joinPassportLink').value.trim();
-        const motivation = document.getElementById('joinMotivation').value.trim();
+        const ideology = document.getElementById('joinIdeology').value.trim();
+        const reason = document.getElementById('joinReason').value.trim();
         const support = document.getElementById('joinSupport').value.trim();
         const discord = document.getElementById('joinDiscord').value.trim();
 
-        if (!fullName || !icAge || !oocAge || !passport || !passportLink || !motivation || !support || !discord) {
-            alert('Заполните все поля!');
+        if (!fullName || !icAge || !oocAge || !passport || !ideology || !reason || !support || !discord) {
+            await alert('Заполните все обязательные поля!');
             return;
         }
 
@@ -1182,16 +1429,17 @@ function setupEventListeners() {
                 oocAge,
                 passport,
                 passportLink,
-                motivation,
+                ideology,
+                reason,
                 support,
                 discord,
-                status: 'pending'
+                status: 'pending' // заявка
             });
-            alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
+            await alert('✅ Заявка успешно отправлена! Ожидайте решения администрации.');
             this.reset();
             if (isAdminLoggedIn) await renderApplications();
         } catch (error) {
-            alert(error.message);
+            await alert(error.message);
         }
     });
 
@@ -1206,6 +1454,8 @@ function setupEventListeners() {
             if (tabName === 'applications') renderApplications();
             if (tabName === 'members') renderAdminMembers();
             if (tabName === 'elections') populateElectionsForm();
+            if (tabName === 'content') loadContentSettings();
+            if (tabName === 'users') renderAdminUsers();
             if (tabName === 'settings') loadVisibilitySettings();
         });
     });
@@ -1227,12 +1477,14 @@ document.addEventListener('DOMContentLoaded', function() {
             await dbFirebase.seed();
             await restoreState();
             await loadVisibilitySettings();
+            await loadContentSettings();
             await renderNews();
             await renderComposition();
             await renderApplications();
             await renderAdminMembers();
             await renderElections();
             await renderSymbolsPage();
+            await renderAdminUsers();
             const members = await dbFirebase.getMembers();
             document.getElementById('totalMembers').textContent = members.length;
             await applyBackground();
