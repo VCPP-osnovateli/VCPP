@@ -11,12 +11,11 @@
 </head>
 <body>
 
-    <!-- ===== ЗАГЛУШКА ТЕХНИЧЕСКИХ РАБОТ (скрыта по умолчанию) ===== -->
+    <!-- ===== ЗАГЛУШКА ТЕХНИЧЕСКИХ РАБОТ ===== -->
     <div id="maintenanceOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0E2A47; color:white; z-index:99999; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:20px;">
         <h1 style="font-size:48px; margin-bottom:20px;">🔧 Ведутся технические работы</h1>
         <p style="font-size:20px; max-width:600px;">Сайт временно недоступен. Приносим извинения за неудобства. Пожалуйста, зайдите позже.</p>
         <p style="margin-top:16px; font-size:14px; opacity:0.7;">ВЦПП «Новая Россия»</p>
-        <!-- НЕЗАМЕТНАЯ КНОПКА ВХОДА ДЛЯ АДМИНИСТРАТОРА -->
         <button id="maintenanceLoginBtn" style="
             position: fixed;
             bottom: 20px;
@@ -369,6 +368,7 @@
                 <button data-tab="content">Редактирование контента</button>
                 <button data-tab="users">Пользователи</button>
                 <button data-tab="settings">Настройки</button>
+                <button data-tab="symbols">Символика</button> <!-- НОВАЯ ВКЛАДКА -->
             </div>
 
             <!-- Вкладка: Новости -->
@@ -552,13 +552,48 @@
                 </form>
             </div>
 
+            <!-- ===== НОВАЯ ВКЛАДКА: Символика ===== -->
+            <div class="admin-panel-section" id="adminTabSymbols">
+                <p style="margin-bottom:16px; color:#3a4a5e;">Загрузка герба, печати и штампа партии.</p>
+                
+                <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
+                    <h4>Герб ВЦПП</h4>
+                    <div class="form-group">
+                        <input type="file" id="symbolGerbInput" accept="image/*" />
+                        <button type="button" class="btn btn-primary btn-sm" id="symbolGerbUpload" style="margin-top:8px;">📤 Загрузить герб</button>
+                    </div>
+                    <div id="symbolGerbPreview" style="margin-top:8px;"></div>
+                    <button type="button" class="btn btn-danger btn-sm" id="symbolGerbRemove">🗑️ Удалить герб</button>
+                </div>
+
+                <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
+                    <h4>Печать</h4>
+                    <div class="form-group">
+                        <input type="file" id="symbolSealInput" accept="image/*" />
+                        <button type="button" class="btn btn-primary btn-sm" id="symbolSealUpload" style="margin-top:8px;">📤 Загрузить печать</button>
+                    </div>
+                    <div id="symbolSealPreview" style="margin-top:8px;"></div>
+                    <button type="button" class="btn btn-danger btn-sm" id="symbolSealRemove">🗑️ Удалить печать</button>
+                </div>
+
+                <div style="border:1px solid var(--light-gray); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
+                    <h4>Штамп</h4>
+                    <div class="form-group">
+                        <input type="file" id="symbolStampInput" accept="image/*" />
+                        <button type="button" class="btn btn-primary btn-sm" id="symbolStampUpload" style="margin-top:8px;">📤 Загрузить штамп</button>
+                    </div>
+                    <div id="symbolStampPreview" style="margin-top:8px;"></div>
+                    <button type="button" class="btn btn-danger btn-sm" id="symbolStampRemove">🗑️ Удалить штамп</button>
+                </div>
+            </div>
+
             <div style="margin-top:20px; text-align:right;">
                 <button class="btn btn-danger" id="adminLogoutBtn">Выйти из админ-панели</button>
             </div>
         </div>
     </div>
 
-    <!-- ===== MODAL: REGISTER (для личного кабинета) ===== -->
+    <!-- ===== MODAL: REGISTER ===== -->
     <div class="modal-overlay" id="registerModal">
         <div class="modal-box">
             <button class="modal-close" id="registerModalClose">&times;</button>
@@ -584,7 +619,6 @@
                     <label>Discord (юзернейм) <span class="required">*</span></label>
                     <input type="text" id="regDiscord" placeholder="ivan123" required />
                 </div>
-                <!-- НОВОЕ ПОЛЕ ПАРОЛЯ -->
                 <div class="form-group">
                     <label>Пароль <span class="required">*</span></label>
                     <input type="password" id="regPassword" placeholder="Придумайте пароль" required />
@@ -595,13 +629,12 @@
         </div>
     </div>
 
-    <!-- ===== MODAL: PROFILE (личный кабинет) ===== -->
+    <!-- ===== MODAL: PROFILE ===== -->
     <div class="modal-overlay" id="profileModal">
         <div class="modal-box">
             <button class="modal-close" id="profileModalClose">&times;</button>
             <div class="modal-title">Личный кабинет</div>
 
-            <!-- Форма входа в личный кабинет -->
             <div id="profileLoginForm">
                 <p style="margin-bottom:16px; color:#3a4a5e;">Войдите, используя номер паспорта и пароль.</p>
                 <form id="profileLogin">
@@ -609,7 +642,6 @@
                         <label>Номер паспорта <span class="required">*</span></label>
                         <input type="text" id="profileLoginPassport" placeholder="1234567" required />
                     </div>
-                    <!-- НОВОЕ ПОЛЕ ПАРОЛЯ -->
                     <div class="form-group">
                         <label>Пароль <span class="required">*</span></label>
                         <input type="password" id="profileLoginPassword" placeholder="Введите пароль" required />
@@ -619,7 +651,6 @@
                 <p style="margin-top:12px; font-size:13px; color:#6a7a8e;">Нет аккаунта? <a href="#" id="switchToRegister" style="color:var(--red); font-weight:600;">Зарегистрироваться</a></p>
             </div>
 
-            <!-- Содержимое личного кабинета -->
             <div id="profileContent" style="display:none;">
                 <div id="profileInfo"></div>
                 <button class="btn btn-edit" id="editProfileToggleBtn" style="margin-top:12px;">✏️ Редактировать профиль</button>
@@ -642,7 +673,6 @@
                             <label>Discord</label>
                             <input type="text" id="editProfileDiscord" />
                         </div>
-                        <!-- НОВОЕ ПОЛЕ ДЛЯ СМЕНЫ ПАРОЛЯ -->
                         <div class="form-group">
                             <label>Новый пароль (оставьте пустым, если не менять)</label>
                             <input type="password" id="editProfilePassword" placeholder="Новый пароль" />
@@ -695,7 +725,6 @@
         </div>
     </footer>
 
-    <!-- Подключаем JavaScript -->
     <script src="app.js"></script>
 </body>
 </html>
