@@ -75,21 +75,18 @@ async function checkMaintenanceMode() {
     const settings = await loadData('settings');
     maintenanceMode = settings && settings.maintenanceMode === true;
 
-    // Проверяем, авторизован ли админ
     isAdminLoggedIn = localStorage.getItem('admin_logged_in') === 'true';
 
     const overlay = document.getElementById('maintenanceOverlay');
     const mainContent = document.getElementById('mainHeader');
 
     if (maintenanceMode && !isAdminLoggedIn) {
-        // Показываем заглушку, скрываем основной контент
         overlay.style.display = 'flex';
         mainContent.style.display = 'none';
         document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none');
         document.querySelector('main .container').style.display = 'none';
         document.querySelector('footer').style.display = 'none';
     } else {
-        // Показываем сайт
         overlay.style.display = 'none';
         mainContent.style.display = 'block';
         document.querySelectorAll('.page-section').forEach(el => el.style.display = '');
@@ -97,12 +94,10 @@ async function checkMaintenanceMode() {
         document.querySelector('footer').style.display = '';
     }
 
-    // Обновляем чекбокс в настройках
     const cb = document.getElementById('maintenanceMode');
     if (cb) cb.checked = maintenanceMode;
 }
 
-// Кнопка входа на заглушке
 document.getElementById('maintenanceLoginBtn').addEventListener('click', function() {
     openModal('loginModal');
 });
@@ -420,6 +415,63 @@ async function renderSymbols() {
 }
 
 // ============================================================
+// ЗАГРУЗКА СИМВОЛИКИ (админ)
+// ============================================================
+async function uploadSymbol(key, fileInputId, previewId) {
+    const fileInput = document.getElementById(fileInputId);
+    if (!fileInput.files || !fileInput.files[0]) {
+        alert('Выберите изображение.');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (!file.type.startsWith('image/')) {
+        alert('Пожалуйста, выберите файл изображения.');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const dataUrl = e.target.result;
+        const settings = await loadData('settings') || {};
+        settings[key] = dataUrl;
+        await database.ref('settings').set(settings);
+        alert(`✅ ${key} успешно загружен!`);
+        fileInput.value = '';
+        loadSymbolsPreview();
+        renderSymbols();
+    };
+    reader.readAsDataURL(file);
+}
+
+async function removeSymbol(key) {
+    if (!confirm(`Удалить этот символ?`)) return;
+    const settings = await loadData('settings') || {};
+    delete settings[key];
+    await database.ref('settings').set(settings);
+    loadSymbolsPreview();
+    renderSymbols();
+    alert('Символ удалён.');
+}
+
+async function loadSymbolsPreview() {
+    const settings = await loadData('settings') || {};
+    const symbols = [
+        { key: 'symbol_gerb', previewId: 'symbolGerbPreview' },
+        { key: 'symbol_seal', previewId: 'symbolSealPreview' },
+        { key: 'symbol_stamp', previewId: 'symbolStampPreview' }
+    ];
+    symbols.forEach(({ key, previewId }) => {
+        const preview = document.getElementById(previewId);
+        if (!preview) return;
+        const data = settings[key];
+        if (data && data.startsWith('data:image')) {
+            preview.innerHTML = `<img src="${data}" style="max-width:150px; max-height:150px; border-radius:8px; border:2px solid var(--light-gray);" />`;
+        } else {
+            preview.innerHTML = '<span style="color:#6a7a8e; font-size:13px;">Изображение не загружено</span>';
+        }
+    });
+}
+
+// ============================================================
 // НАСТРОЙКИ ВИДИМОСТИ И КОНТЕНТА
 // ============================================================
 async function loadVisibilitySettings() {
@@ -478,7 +530,6 @@ function applyContent(content) {
 async function initApp() {
     await checkMaintenanceMode();
 
-    // Если сайт в режиме техработ и админ не залогинен – не грузим остальное
     if (maintenanceMode && !isAdminLoggedIn) {
         console.log('🔧 Режим технических работ. Доступ только для администратора.');
         return;
@@ -497,7 +548,6 @@ async function initApp() {
     const members = await loadMembers();
     document.getElementById('totalMembers').textContent = members.length;
 
-    // Восстановление состояния админа
     if (localStorage.getItem('admin_logged_in') === 'true') {
         document.getElementById('loginBtn').textContent = 'Админ-панель';
         document.getElementById('loginBtn').classList.add('logged-in');
@@ -538,6 +588,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderAdminUsers();
             loadVisibilitySettings();
             loadContentSettings();
+            loadSymbolsPreview(); // загружаем превью символов
         } else {
             openModal('loginModal');
         }
@@ -593,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderAdminUsers();
             loadVisibilitySettings();
             loadContentSettings();
-            // Перезапускаем проверку техработ, чтобы скрыть заглушку
+            loadSymbolsPreview();
             checkMaintenanceMode();
         } else {
             alert('Неверный логин или пароль!');
@@ -888,7 +939,6 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         const settings = await loadData('settings') || {};
-        // Обновляем только переданные ключи
         settings.visibility = {
             showElections: newSettings.showElections,
             showComposition: newSettings.showComposition,
@@ -1004,6 +1054,27 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Фон сброшен.');
     });
 
+    // ----- ЗАГРУЗКА СИМВОЛИКИ (админ) -----
+    document.getElementById('symbolGerbUpload').addEventListener('click', function() {
+        uploadSymbol('symbol_gerb', 'symbolGerbInput', 'symbolGerbPreview');
+    });
+    document.getElementById('symbolSealUpload').addEventListener('click', function() {
+        uploadSymbol('symbol_seal', 'symbolSealInput', 'symbolSealPreview');
+    });
+    document.getElementById('symbolStampUpload').addEventListener('click', function() {
+        uploadSymbol('symbol_stamp', 'symbolStampInput', 'symbolStampPreview');
+    });
+
+    document.getElementById('symbolGerbRemove').addEventListener('click', function() {
+        removeSymbol('symbol_gerb');
+    });
+    document.getElementById('symbolSealRemove').addEventListener('click', function() {
+        removeSymbol('symbol_seal');
+    });
+    document.getElementById('symbolStampRemove').addEventListener('click', function() {
+        removeSymbol('symbol_stamp');
+    });
+
     // ----- АДМИН-ВКЛАДКИ (заполнение данных при переключении) -----
     document.querySelectorAll('.admin-tabs button').forEach(tab => {
         tab.addEventListener('click', async function() {
@@ -1017,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tabName === 'applications') await renderApplications();
             if (tabName === 'members') await renderAdminMembers();
             if (tabName === 'users') await renderAdminUsers();
+            if (tabName === 'symbols') await loadSymbolsPreview(); // загрузка превью символов
             if (tabName === 'elections') {
                 const elections = await loadData('elections');
                 if (elections) {
